@@ -30,6 +30,10 @@
     filter: drop-shadow(0 0 4px #00FF00);
     }
 
+    .centered-line {
+      text-align: center;
+    }
+
     .input-line {
     display: flex;
     }
@@ -90,21 +94,7 @@
   </style>
 </head>
 <body>
-  <div id="terminal">
-MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
-------- ONE TIME PASSWORD ACCEPTED -------
-
-> WELCOME USER
-
---- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---
-
-INITIALIZING SYSTEM...
-SYSTEM STATUS: STABLE
-USER PRIVILEGES: READ/VIEW/NAVIGATE
-
-> SYSTEM ONLINE.
-> TYPE "help" FOR AVAILABLE COMMANDS.
-  </div>
+  <div id="terminal"></div>
   <div class="input-line">
     <span>&gt; </span>
     <input id="terminal-input" autofocus />
@@ -113,6 +103,20 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
+
+    const initialWelcomeHTML = `MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
+<div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
+
+> WELCOME USER
+
+<div class="centered-line">--- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---</div>
+
+INITIALIZING SYSTEM...
+SYSTEM STATUS: STABLE
+USER PRIVILEGES: READ/VIEW/NAVIGATE
+
+> SYSTEM ONLINE.
+> TYPE "help" FOR AVAILABLE COMMANDS.`;
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     terminal.addEventListener('click', () => {
@@ -142,20 +146,41 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     ];
 
     const menuItems = [
-      "1. [Placeholder for Project 1]",
+      "1. Bio - [TYPE 'bio' to view]",
       "2. [Placeholder for Project 2]",
       "3. [Placeholder for Project 3]",
       "4. [Placeholder for Project 4]",
       "5. [Placeholder for Project 5]"
     ];
 
-    const helpText = `AVAILABLE COMMANDS:
-- help : List commands
-- logs : Display command history
-- menu : Display a list of portfolio items
-- transfer : get secure CV file
-- clear : Clear the terminal
-- exit : Close terminal interface`;
+    const commandDescriptions = {
+      'help': 'List available commands',
+      'bio': 'Display my professional bio',
+      'logs': 'Display command history with timestamps',
+      'menu': 'Display a list of portfolio items',
+      'transfer': 'Open my CV in a new tab',
+      'clear': 'Clear the terminal and reset to welcome screen',
+      'exit': 'Close the terminal interface'
+    };
+
+    function printWelcomeMessage() {
+      terminal.innerHTML = initialWelcomeHTML;
+    }
+
+    function typewriterEffect(text, onComplete) {
+      let i = 0;
+      input.disabled = true; // Disable input while typing
+      const typingInterval = setInterval(() => {
+        if (i < text.length) {
+          terminal.innerText += text.charAt(i);
+          i++;
+          window.scrollTo(0, document.body.scrollHeight);
+        } else {
+          clearInterval(typingInterval);
+          if (onComplete) onComplete();
+        }
+      }, 30); // Adjust typing speed here (in milliseconds)
+    }
 
     function downloadTranscript() {
       // We grab the innerText of the terminal, but add a final message.
@@ -227,8 +252,25 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       window.scrollTo(0, document.body.scrollHeight);
     });
 
+    printWelcomeMessage();
+
     const commands = {
-      help: () => helpText,
+      help: () => {
+        return 'AVAILABLE COMMANDS:\n' + Object.entries(commandDescriptions)
+          .map(([command, description]) => `- ${command} : ${description}`)
+          .join('\n');
+      },
+      bio: () => {
+        const bioText = "This is where your bio paragraph will go. You can replace this text with your own personal or professional summary. It will be typed out character by character to simulate a retro terminal display.";
+        typewriterEffect(bioText, () => {
+          // This function runs after the typing is complete
+          terminal.innerText += "\n\n"; // Add spacing after the bio
+          input.disabled = false; // Re-enable the input field
+          input.focus(); // Focus on the input field for the next command
+          window.scrollTo(0, document.body.scrollHeight);
+        });
+        return null; // Signal that output is handled asynchronously
+      },
       menu: () => menuItems.join("\n"),
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
@@ -255,12 +297,20 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     function handleCommand(cmd) {
       // The 'clear' command is special as it modifies the terminal directly
       if (cmd === 'clear') {
-        terminal.innerText = '';
+        printWelcomeMessage();
         return;
       }
 
       const commandFn = commands[cmd];
-      const output = commandFn ? commandFn() : `Unrecognized command: '${cmd}'\nType 'help' for options.`;
+      if (!commandFn) {
+        terminal.innerText += `Unrecognized command: '${cmd}'\nType 'help' for options.\n\n`;
+        return;
+      }
+
+      const output = commandFn();
+
+      // If a command returns null, it handles its own output (e.g., typewriter)
+      if (output === null) return;
 
       // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
       const trailingNewlines = (cmd === 'help' || cmd === 'exit') ? "\n" : "\n\n";
