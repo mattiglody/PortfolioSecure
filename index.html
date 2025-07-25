@@ -153,7 +153,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     const menuItems = [
       "1. Bio - [TYPE 'bio' to view]",
       "2. Contact - [TYPE 'contact' to view]",
-      "3. [Placeholder for Project 3]",
+      "3. Work History - [TYPE 'workhistory' to view]",
       "4. [Placeholder for Project 4]",
       "5. [Placeholder for Project 5]"
     ];
@@ -162,11 +162,31 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'help': 'List available commands',
       'bio': 'Display my professional bio',
       'contact': 'Display my contact information',
+      'workhistory': 'Display my professional work history',
       'logs': 'Display command history with timestamps',
       'menu': 'Display a list of portfolio items',
       'transfer': 'Open my CV in a new tab',
       'clear': 'Clear the terminal and reset to welcome screen',
       'exit': 'Close the terminal interface'
+    };
+
+    const workHistoryDetails = {
+      '1': {
+        title: 'Role 1: [Your Title Here]',
+        description: 'Placeholder text for your first role. Describe your responsibilities and achievements here.'
+      },
+      '2': {
+        title: 'Role 2: [Your Title Here]',
+        description: 'Placeholder text for your second role. Describe your responsibilities and achievements here.'
+      },
+      '3': {
+        title: 'Role 3: [Your Title Here]',
+        description: 'Placeholder text for your third role. Describe your responsibilities and achievements here.'
+      },
+      '4': {
+        title: 'Role 4: [Your Title Here]',
+        description: 'Placeholder text for your fourth role. Describe your responsibilities and achievements here.'
+      }
     };
 
     function printWelcomeMessage() {
@@ -234,6 +254,26 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             awaitingResponseFor = null;
           }
           break;
+        case 'workhistory_select':
+          if (response === 'back') {
+            terminal.innerText += `\nReturning to main prompt.\n\n`;
+            awaitingResponseFor = null;
+            break;
+          }
+          const job = workHistoryDetails[response];
+          if (job) {
+            awaitingResponseFor = null; // Valid selection, so we're done with the prompt.
+            const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
+            typewriterEffect(fullText, () => {
+              terminal.innerText += "\n\n";
+              input.disabled = false;
+              input.focus();
+            });
+          } else {
+            terminal.innerText += `\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`;
+            // Don't reset awaitingResponseFor, so the user can try again.
+          }
+          break;
       }
     }
 
@@ -288,6 +328,13 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         });
         return null; // Signal that output is handled asynchronously
       },
+      workhistory: () => {
+        awaitingResponseFor = 'workhistory_select';
+        const jobList = Object.entries(workHistoryDetails)
+          .map(([key, value]) => `${key}. ${value.title}`)
+          .join('\n');
+        return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
+      },
       menu: () => menuItems.join("\n"),
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
@@ -330,7 +377,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       if (output === null) return;
 
       // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (cmd === 'help' || cmd === 'exit') ? "\n" : "\n\n";
+      const trailingNewlines = (['help', 'exit', 'workhistory'].includes(cmd)) ? "\n" : "\n\n";
       terminal.innerText += output + trailingNewlines;
     }
   </script>
