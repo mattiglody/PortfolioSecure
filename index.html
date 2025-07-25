@@ -149,8 +149,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
     const helpText = `AVAILABLE COMMANDS:
 - help : List commands
-- logs : Display command history with timestamps
+- logs : Display command history
 - menu : Display a list of portfolio items
+- transfer : get secure CV file
 - clear : Clear the terminal
 - exit : Close terminal interface`;
 
@@ -171,6 +172,12 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     const commands = {
       help: () => helpText,
       menu: () => menuItems.join("\n"),
+      transfer: () => {
+        const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
+        // Open the file in a new tab. The browser's built-in PDF viewer will handle it.
+        window.open(filePath, '_blank');
+        return "ACCESSING DOCUMENT...\nOPENING CV IN NEW TAB.";
+      },
       logs: () => {
         // Exclude the 'logs' command itself from the output for a cleaner history view.
         if (commandHistory.length <= 1) {
