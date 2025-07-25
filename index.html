@@ -191,7 +191,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const commandFn = commands[cmd];
       const output = commandFn ? commandFn() : `Unrecognized command: '${cmd}'\nType 'help' for options.`;
 
-      terminal.innerText += output + "\n";
+      // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
+      const trailingNewlines = (cmd === 'help') ? "\n" : "\n\n";
+      terminal.innerText += output + trailingNewlines;
     }
   </script>
 </body>
