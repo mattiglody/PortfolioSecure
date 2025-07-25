@@ -91,7 +91,7 @@
 </head>
 <body>
   <div id="terminal">
-MATTHEW IGLODY SECURE SERVER (TM) TERMLINK PROTOCOL
+MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
 ------- ONE TIME PASSWORD ACCEPTED -------
 
 > WELCOME USER
@@ -118,6 +118,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     terminal.addEventListener('click', () => {
       input.focus();
     });
+
+    let awaitingResponseFor = null; // State for multi-step commands
 
     const commandHistory = [];
 
@@ -155,15 +157,71 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 - clear : Clear the terminal
 - exit : Close terminal interface`;
 
+    function downloadTranscript() {
+      // We grab the innerText of the terminal, but add a final message.
+      const transcriptContent = terminal.innerText + "\n\n--- TRANSCRIPT END ---";
+      const blob = new Blob([transcriptContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `terminal-session-${timestamp}.txt`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      terminal.innerText += `\nDownloading transcript...`;
+    }
+
+    function handleResponse(response) {
+      switch (awaitingResponseFor) {
+        case 'exit_confirm':
+          if (response === 'y' || response === 'yes') {
+            terminal.innerText += `\nWould you like a transcript of your activity? (y/n)`;
+            awaitingResponseFor = 'transcript_prompt';
+          } else {
+            terminal.innerText += `\nExit cancelled.\n\n`;
+            awaitingResponseFor = null;
+          }
+          break;
+        case 'transcript_prompt':
+          if (response === 'y' || response === 'yes') {
+            downloadTranscript();
+          }
+          // Instead of exiting, ask for final confirmation.
+          terminal.innerText += `\n\nAre you sure you want to terminate the session? (y/n)`;
+          awaitingResponseFor = 'final_exit_confirm';
+          break;
+        case 'final_exit_confirm':
+          if (response === 'y' || response === 'yes') {
+            terminal.innerText += `\n\nSESSION TERMINATED.\nGOODBYE.`;
+            input.disabled = true;
+            setTimeout(() => window.close(), 2000);
+            awaitingResponseFor = null;
+          } else {
+            terminal.innerText += `\nExit cancelled.\n\n`;
+            awaitingResponseFor = null;
+          }
+          break;
+      }
+    }
+
     input.addEventListener('keydown', function(event) {
       if (event.key !== 'Enter') return;
 
-      const commandText = input.value.trim();
+      const commandText = input.value.trim().toLowerCase();
       if (commandText === '') return;
 
-      terminal.innerText += `\n> ${commandText}\n`;
-      commandHistory.push({ text: commandText, timestamp: new Date() });
-      handleCommand(commandText.toLowerCase());
+      terminal.innerText += `\n> ${input.value.trim()}`; // Display original casing
+
+      if (awaitingResponseFor) {
+        terminal.innerText += `\n`;
+        handleResponse(commandText);
+      } else {
+        terminal.innerText += `\n`;
+        commandHistory.push({ text: input.value.trim(), timestamp: new Date() });
+        handleCommand(commandText);
+      }
 
       input.value = '';
       window.scrollTo(0, document.body.scrollHeight);
@@ -189,8 +247,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         }).join("\n");
       },
       exit: () => {
-        input.disabled = true;
-        return "SESSION TERMINATED.\nGOODBYE.";
+        awaitingResponseFor = 'exit_confirm';
+        return "Are you sure you want to exit? (y/n)";
       },
     };
 
@@ -205,7 +263,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const output = commandFn ? commandFn() : `Unrecognized command: '${cmd}'\nType 'help' for options.`;
 
       // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (cmd === 'help') ? "\n" : "\n\n";
+      const trailingNewlines = (cmd === 'help' || cmd === 'exit') ? "\n" : "\n\n";
       terminal.innerText += output + trailingNewlines;
     }
   </script>
