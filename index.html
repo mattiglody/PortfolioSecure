@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Secure Server</title>
   <style>
     html {
@@ -11,9 +12,9 @@
     background-color: black;
     color: #00FF00;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
+    font-size: clamp(14px, 2.5vw, 16px); /* Responsive font size for better viewing on all devices */
     margin: 0;
-    padding: 20px;
+    padding: 10px; /* Reduced padding for more content space on mobile */
     white-space: pre-wrap;
     position: relative;
     animation: flicker 0.2s infinite;
@@ -112,6 +113,11 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
+
+    // Focus the input when the user clicks/taps anywhere on the terminal body
+    terminal.addEventListener('click', () => {
+      input.focus();
+    });
 
     const commandHistory = [];
 
