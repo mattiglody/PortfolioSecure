@@ -160,7 +160,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       "1. Bio - [TYPE 'bio' to view]",
       "2. Contact - [TYPE 'contact' to view]",
       "3. Work History - [TYPE 'workhistory' to view]",
-      "4. [Placeholder for Project 4]",
+      "4. Security Breach Minigame - [TYPE 'hack' to play]",
       "5. [Placeholder for Project 5]"
     ];
 
@@ -170,6 +170,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'contact': 'Display my contact information',
       'workhistory': 'Display my professional work history',
       'menu': 'Display a list of portfolio items',
+      'hack': 'Initiate a security breach simulation',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
@@ -194,6 +195,13 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         description: 'Placeholder text for your fourth role. Describe your responsibilities and achievements here.'
       }
     };
+
+    const hackGameData = {
+      words: ['SYSTEMS', 'ROUTERS', 'GATEWAY', 'NETWORK', 'CIRCUIT', 'ANALYZE', 'CONNECT', 'FIREWALL', 'PROTOCOL', 'DATABASE'],
+      attempts: 4
+    };
+
+    let hackGameState = {};
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML;
@@ -228,6 +236,59 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       terminal.innerText += `\nDownloading transcript...`;
+    }
+
+    function startHackGame() {
+      awaitingResponseFor = 'hack_game';
+      const password = hackGameData.words[Math.floor(Math.random() * hackGameData.words.length)];
+      hackGameState = {
+        password: password,
+        attemptsLeft: hackGameData.attempts
+      };
+
+      const gameScreen = `...DECRYPTING...\nPASSWORD REQUIRED.\n${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n\n${hackGameData.words.join('   ')}\n\nENTER PASSWORD:`;
+      typewriterEffect(gameScreen, () => {
+        input.disabled = false;
+        input.focus();
+      });
+    }
+
+    function handleHackGuess(guess) {
+      guess = guess.toUpperCase();
+      if (!hackGameData.words.includes(guess)) {
+        terminal.innerText += `\n> SYNTAX ERROR. UNKNOWN WORD.\n`;
+        return;
+      }
+
+      hackGameState.attemptsLeft--;
+
+      if (guess === hackGameState.password) {
+        endHackGame(true);
+        return;
+      }
+
+      if (hackGameState.attemptsLeft <= 0) {
+        endHackGame(false);
+        return;
+      }
+
+      let likeness = 0;
+      for (let i = 0; i < guess.length; i++) {
+        if (i < hackGameState.password.length && guess[i] === hackGameState.password[i]) {
+          likeness++;
+        }
+      }
+      terminal.innerText += `\n> ACCESS DENIED.\n> LIKENESS=${likeness}\n> ${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n`;
+    }
+
+    function endHackGame(won) {
+      awaitingResponseFor = null;
+      const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
+      typewriterEffect(message, () => {
+        terminal.innerText += "\n\n";
+        input.disabled = false;
+        input.focus();
+      });
     }
 
     function handleResponse(response) {
@@ -279,6 +340,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             terminal.innerText += `\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`;
             // Don't reset awaitingResponseFor, so the user can try again.
           }
+          break;
+        case 'hack_game':
+          handleHackGuess(response);
           break;
       }
     }
@@ -341,6 +405,10 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           .join('\n');
         return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
       },
+      hack: () => {
+        startHackGame();
+        return null; // Signal that output is handled asynchronously
+      },
       menu: () => menuItems.join("\n"),
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
@@ -383,7 +451,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       if (output === null) return;
 
       // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (['help', 'exit', 'workhistory'].includes(cmd)) ? "\n" : "\n\n";
+      const trailingNewlines = (['help', 'exit', 'workhistory', 'hack'].includes(cmd)) ? "\n" : "\n\n";
       terminal.innerText += output + trailingNewlines;
     }
   </script>
