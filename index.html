@@ -14,7 +14,7 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
-    padding: 10px; /* Reduced padding for more content space on mobile */
+    padding: 10px 5px; /* Reduced side padding for more width on mobile */
     white-space: pre-wrap;
     position: relative;
     animation: flicker 0.2s infinite;
@@ -22,9 +22,12 @@
     box-sizing: border-box;
     }
 
-    #terminal {
+    .terminal-container {
     max-width: 900px;
     margin: auto;
+    }
+
+    #terminal {
     position: relative;
     z-index: 2;
     filter: drop-shadow(0 0 4px #00FF00);
@@ -95,10 +98,12 @@
   </style>
 </head>
 <body>
-  <div id="terminal"></div>
-  <div class="input-line">
-    <span>&gt; </span>
-    <input id="terminal-input" autofocus />
+  <div class="terminal-container">
+    <div id="terminal"></div>
+    <div class="input-line">
+      <span>&gt; </span>
+      <input id="terminal-input" autofocus />
+    </div>
   </div>
 
   <script>
