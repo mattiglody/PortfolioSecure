@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Server</title>
+  <style>
+    html {
+      height: 100%;
+    }
+    body {
+    background-color: black;
+    color: #00FF00;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    margin: 0;
+    padding: 20px;
+    white-space: pre-wrap;
+    position: relative;
+    animation: flicker 0.2s infinite;
+    height: 100%;
+    box-sizing: border-box;
+    }
+
+    #terminal {
+    max-width: 900px;
+    margin: auto;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 4px #00FF00);
+    }
+
+    .input-line {
+    display: flex;
+    }
+
+    .input-line span {
+    flex-shrink: 0;
+    }
+
+    .input-line input {
+    background: black;
+    border: none;
+    color: #00FF00;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+    flex-grow: 1;
+    }
+
+    /* CRT Flicker */
+    @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.98; }
+    60% { opacity: 0.95; }
+    70% { opacity: 0.97; }
+    80% { opacity: 0.96; }
+    90% { opacity: 0.99; }
+    }
+
+    /* Scanlines */
+    body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 255, 0, 0.05),
+      rgba(0, 255, 0, 0.05) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+    z-index: 1;
+    pointer-events: none;
+    }
+
+    /* Radial glow for curvature */
+    body::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(0, 255, 0, 0.05), transparent 70%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+MATTHEW IGLODY SECURE SERVER (TM) TERMLINK PROTOCOL
+------- ONE TIME PASSWORD ACCEPTED -------
+
+> WELCOME USER
+
+--- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---
+
+INITIALIZING SYSTEM...
+SYSTEM STATUS: STABLE
+USER PRIVILEGES: READ/VIEW/NAVIGATE
+
+> SYSTEM ONLINE.
+> TYPE "help" FOR AVAILABLE COMMANDS.
+  </div>
+  <div class="input-line">
+    <span>&gt; </span>
+    <input id="terminal-input" autofocus />
+  </div>
+
+  <script>
+    const terminal = document.getElementById('terminal');
+    const input = document.getElementById('terminal-input');
+
+    const commandHistory = [];
+
+    const logs = [
+      "[LOG 1 - 07/24/2077 13:04:02] Overseer reports Vault 112 social conditioning protocol is proceeding as planned.",
+      "[LOG 2 - 07/25/2077 08:45:30] Internal sensor calibration completed. Minor anomalies in oxygen circulation flagged.",
+      "[LOG 3 - 07/25/2077 16:12:59] Unauthorized attempt to access cryo chamber controls. Technician ID #0043.",
+      "[LOG 4 - 07/26/2077 00:03:11] ALERT: Security lockdown initiated. Emergency protocol ZETA-5 activated.",
+      "[LOG 5 - 07/26/2077 06:27:41] Power fluctuation detected in Sector C3. Engineering dispatched.",
+      "[LOG 6 - 07/26/2077 09:15:20] Overseer broadcast: 'Remain calm. This is a containment drill.'",
+      "[LOG 7 - 07/26/2077 12:52:14] Multiple failed login attempts from unrecognized terminal.",
+      "[LOG 8 - 07/26/2077 18:34:57] Cryo Pod #12 suspension terminated. Medical team dispatched.",
+      "[LOG 9 - 07/27/2077 02:17:04] Temperature spike in cryogenics bay. Fire suppression holding.",
+      "[LOG 10 - 07/27/2077 05:39:33] Coolant leak in sub-level. Repairs underway.",
+      "[LOG 11 - 07/27/2077 08:00:00] Surface beacon pinged. No signal response. Possible comms malfunction.",
+      "[LOG 12 - 07/27/2077 10:22:18] Vault entrance locked. Unrecognized biometric access attempt logged.",
+      "[LOG 13 - 07/27/2077 13:14:45] Cafeteria nutrient dispenser malfunction. Manual override successful.",
+      "[LOG 14 - 07/27/2077 15:48:02] Resident anxiety levels elevated. Increasing recreational programs.",
+      "[LOG 15 - 07/27/2077 20:01:59] Motion detected in corridor 7-B. No personnel scheduled. Drone dispatched."
+    ];
+
+    const menuItems = [
+      "1. [Placeholder for Project 1]",
+      "2. [Placeholder for Project 2]",
+      "3. [Placeholder for Project 3]",
+      "4. [Placeholder for Project 4]",
+      "5. [Placeholder for Project 5]"
+    ];
+
+    const helpText = `AVAILABLE COMMANDS:
+- help : List commands
+- logs : Display command history with timestamps
+- menu : Display a list of portfolio items
+- clear : Clear the terminal
+- exit : Close terminal interface`;
+
+    input.addEventListener('keydown', function(event) {
+      if (event.key !== 'Enter') return;
+
+      const commandText = input.value.trim();
+      if (commandText === '') return;
+
+      terminal.innerText += `\n> ${commandText}\n`;
+      commandHistory.push({ text: commandText, timestamp: new Date() });
+      handleCommand(commandText.toLowerCase());
+
+      input.value = '';
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    const commands = {
+      help: () => helpText,
+      menu: () => menuItems.join("\n"),
+      logs: () => {
+        // Exclude the 'logs' command itself from the output for a cleaner history view.
+        if (commandHistory.length <= 1) {
+          return "No previous commands in history.";
+        }
+        return commandHistory.slice(0, -1).map(entry => {
+          const time = entry.timestamp.toLocaleTimeString('en-US', { hour12: false });
+          return `[${time}] ${entry.text}`;
+        }).join("\n");
+      },
+      exit: () => {
+        input.disabled = true;
+        return "SESSION TERMINATED.\nGOODBYE.";
+      },
+    };
+
+    function handleCommand(cmd) {
+      // The 'clear' command is special as it modifies the terminal directly
+      if (cmd === 'clear') {
+        terminal.innerText = '';
+        return;
+      }
+
+      const commandFn = commands[cmd];
+      const output = commandFn ? commandFn() : `Unrecognized command: '${cmd}'\nType 'help' for options.`;
+
+      terminal.innerText += output + "\n";
+    }
+  </script>
+</body>
+</html>
