@@ -36,6 +36,7 @@
 
     .input-line {
     display: flex;
+    padding: 5px 0; /* Add some vertical space to the input line */
     }
 
     .input-line span {
@@ -119,8 +120,12 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 > TYPE "help" FOR AVAILABLE COMMANDS.`;
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
-    terminal.addEventListener('click', () => {
-      input.focus();
+    document.body.addEventListener('click', (event) => {
+      // If the user clicks on something that is not the input itself, focus the input.
+      // This is to avoid interfering with text selection inside the input field.
+      if (event.target !== input) {
+        input.focus();
+      }
     });
 
     let awaitingResponseFor = null; // State for multi-step commands
@@ -147,7 +152,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
     const menuItems = [
       "1. Bio - [TYPE 'bio' to view]",
-      "2. [Placeholder for Project 2]",
+      "2. Contact - [TYPE 'contact' to view]",
       "3. [Placeholder for Project 3]",
       "4. [Placeholder for Project 4]",
       "5. [Placeholder for Project 5]"
@@ -156,6 +161,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     const commandDescriptions = {
       'help': 'List available commands',
       'bio': 'Display my professional bio',
+      'contact': 'Display my contact information',
       'logs': 'Display command history with timestamps',
       'menu': 'Display a list of portfolio items',
       'transfer': 'Open my CV in a new tab',
@@ -265,6 +271,17 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         typewriterEffect(bioText, () => {
           // This function runs after the typing is complete
           terminal.innerText += "\n\n"; // Add spacing after the bio
+          input.disabled = false; // Re-enable the input field
+          input.focus(); // Focus on the input field for the next command
+          window.scrollTo(0, document.body.scrollHeight);
+        });
+        return null; // Signal that output is handled asynchronously
+      },
+      contact: () => {
+        const contactText = "Cell: 732-573-8567\nEmail: mattiglody@gmail.com";
+        typewriterEffect(contactText, () => {
+          // This function runs after the typing is complete
+          terminal.innerText += "\n\n"; // Add spacing after the contact info
           input.disabled = false; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
