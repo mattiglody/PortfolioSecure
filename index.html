@@ -194,6 +194,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'wh': 'workhistory',
       'jobs': 'workhistory',
       'exp': 'workhistory',
+      'li': 'linkedin',
       'm': 'menu',
       'game': 'hack',
       'play': 'hack',
@@ -238,6 +239,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'bio': 'Display my professional bio',
       'contact': 'Display my contact information',
       'workhistory': 'Display my professional work history',
+      'linkedin': 'Open my LinkedIn profile in a new tab',
       'menu': 'Display a list of portfolio items',
       'hack': 'Initiate a security breach simulation',
       'hangman': 'Play a classic game of hangman',
@@ -731,6 +733,11 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           .map(([key, value]) => `${key}. ${value.title}`)
           .join('\n');
         return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
+      },
+      linkedin: () => {
+        const url = 'https://www.linkedin.com/in/matthew-iglody/';
+        window.open(url, '_blank');
+        return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
       },
       hangman: () => {
         startHangmanGame();
