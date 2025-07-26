@@ -15,7 +15,7 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
-    padding: 10px 5px 50px; /* Add bottom padding to prevent content from being hidden by the fixed footer */
+    padding: 10px 5px;
     white-space: pre-wrap;
     position: relative;
     animation: flicker 0.2s infinite;
@@ -81,16 +81,10 @@
     }
 
     footer {
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 100%;
       text-align: center;
       padding: 15px 0;
       font-size: 12px;
       opacity: 0.6;
-      /* Allow clicks to pass through to the body for focus */
-      pointer-events: none;
     }
 
     /* CRT Flicker */
@@ -141,10 +135,10 @@
       <span>&gt; </span>
       <div id="terminal-input" contenteditable="true" autofocus></div>
     </div>
+    <footer>
+      &copy; 2025 Matthew Emil Iglody
+    </footer>
   </div>
-  <footer>
-    &copy; 2025 Matthew Emil Iglody
-  </footer>
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
