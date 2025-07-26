@@ -15,20 +15,21 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
-    padding: 10px 5px;
     white-space: pre-wrap;
     position: relative;
     animation: flicker 0.2s infinite;
-    min-height: 100%; /* Use min-height for better layout stability with virtual keyboards */
-    box-sizing: border-box;
     }
 
     .terminal-container {
       max-width: 900px;
       /* Add horizontal padding to indent the content from the edges */
-      padding: 0 2em;
+      padding: 10px 2em 0; /* Add top padding, horizontal padding is for centering */
       box-sizing: border-box;
       margin: auto;
+      /* Flexbox layout to push footer to the bottom */
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     .ascii-art {
@@ -48,6 +49,7 @@
     z-index: 2;
     filter: drop-shadow(0 0 4px #00FF00);
     white-space: pre-wrap; /* Ensure newlines in text are respected */
+    /* This area will now grow naturally with its content */
     }
 
     .centered-line {
@@ -56,7 +58,9 @@
 
     .input-line {
     display: flex;
-    padding: 5px 0; /* Add some vertical space to the input line */
+    /* Use margin to create a consistent space above the input line */
+    /* Set margin to one line-height to create a full blank line of space */
+    margin-top: 1.2em;
     }
 
     .input-line span {
@@ -85,6 +89,11 @@
       padding: 15px 0;
       font-size: 12px;
       opacity: 0.6;
+    }
+
+    .spacer {
+      /* This empty div will grow to push the footer to the bottom */
+      flex-grow: 1;
     }
 
     /* CRT Flicker */
@@ -135,6 +144,7 @@
       <span>&gt; </span>
       <div id="terminal-input" contenteditable="true" autofocus></div>
     </div>
+    <div class="spacer"></div>
     <footer>
       &copy; 2025 Matthew Emil Iglody
     </footer>
@@ -164,6 +174,7 @@ SYSTEM STATUS: STABLE
 USER PRIVILEGES: READ/VIEW/NAVIGATE
 
 > SYSTEM ONLINE.
+
 > TYPE "help" FOR AVAILABLE COMMANDS.
 `;
 
@@ -479,7 +490,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         : `\n...FAILURE...\n${hangmanGameData.stages[hangmanGameState.mistakes]}\nGAME OVER.`;
         
       typewriterEffect(message, () => {
-        appendTextToTerminal("\n\n");
+        appendTextToTerminal("\n");
         input.contentEditable = 'true';
         input.focus();
       });
@@ -532,7 +543,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       awaitingResponseFor = null;
       const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
       typewriterEffect(message, () => {
-        appendTextToTerminal("\n\n");
+        appendTextToTerminal("\n");
         input.contentEditable = 'true';
         input.focus();
       });
@@ -545,7 +556,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             appendTextToTerminal(`\nWould you like a transcript of your activity? (y/n)`);
             awaitingResponseFor = 'transcript_prompt';
           } else {
-            appendTextToTerminal(`\nExit cancelled.\n\n`);
+            appendTextToTerminal(`\nExit cancelled.\n`);
             awaitingResponseFor = null;
           }
           break;
@@ -564,26 +575,26 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             setTimeout(() => window.close(), 2000);
             awaitingResponseFor = null;
           } else {
-            appendTextToTerminal(`\nExit cancelled.\n\n`);
+            appendTextToTerminal(`\nExit cancelled.\n`);
             awaitingResponseFor = null;
           }
           break;
         case 'bio_continue':
           if (response === 'y' || response === 'yes') {
             awaitingResponseFor = null; // Reset state before async operation
-            typewriterEffect(`\n\n${bioTextPart2}`, () => {
-              appendTextToTerminal("\n\n");
+            typewriterEffect(`\n${bioTextPart2}`, () => {
+              appendTextToTerminal("\n");
               input.contentEditable = 'true';
               input.focus();
             });
           } else {
-            appendTextToTerminal(`\n\nReturning to main prompt.\n\n`);
+            appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
           }
           break;
         case 'workhistory_select':
           if (response === 'back') {
-            appendTextToTerminal(`\nReturning to main prompt.\n\n`);
+            appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
             break;
           }
@@ -592,12 +603,12 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             awaitingResponseFor = null; // Valid selection, so we're done with the prompt.
             const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
             typewriterEffect(fullText, () => {
-              appendTextToTerminal("\n\n");
+              appendTextToTerminal("\n");
               input.contentEditable = 'true';
               input.focus();
             });
           } else {
-            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`);
+            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n`);
             // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
@@ -714,7 +725,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         const contactText = "Cell: 732-573-8567\nEmail: mattiglody@gmail.com";
         typewriterEffect(contactText, () => {
           // This function runs after the typing is complete
-          appendTextToTerminal("\n\n"); // Add spacing after the contact info
+          appendTextToTerminal("\n"); // Add spacing after the contact info
           input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
@@ -775,7 +786,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
       const commandFn = commands[resolvedCmd];
       if (!commandFn) {
-        appendTextToTerminal(`Unrecognized command: '${cmd}'\nType 'help' (or 'h') for options.\n\n`);
+        appendTextToTerminal(`Unrecognized command: '${cmd}'\nType 'help' (or 'h') for options.\n`);
         return;
       }
 
@@ -784,9 +795,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       // If a command returns null, it handles its own output (e.g., typewriter)
       if (output === null) return;
 
-      // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (['help', 'exit', 'workhistory', 'hack'].includes(resolvedCmd)) ? "\n" : "\n\n";
-      appendTextToTerminal(output + trailingNewlines);
+      // Add a single newline for consistent spacing before the next prompt.
+      appendTextToTerminal(output + "\n");
     }
   </script>
 </body>
