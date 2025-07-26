@@ -186,6 +186,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'm': 'menu',
       'game': 'hack',
       'play': 'hack',
+      'hm': 'hangman',
       'cv': 'transfer',
       'resume': 'transfer',
       'history': 'logs',
@@ -218,7 +219,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       "2. Contact - [TYPE 'contact' to view]",
       "3. Work History - [TYPE 'workhistory' to view]",
       "4. Security Breach Minigame - [TYPE 'hack' to play]",
-      "5. [Placeholder for Project 5]"
+      "5. Hangman - [TYPE 'hangman' to play]"
     ];
 
     const commandDescriptions = {
@@ -228,6 +229,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'workhistory': 'Display my professional work history',
       'menu': 'Display a list of portfolio items',
       'hack': 'Initiate a security breach simulation',
+      'hangman': 'Play a classic game of hangman',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
@@ -259,6 +261,77 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     };
 
     let hackGameState = {};
+
+    const hangmanGameData = {
+      words: ['JAVASCRIPT', 'TERMINAL', 'PORTFOLIO', 'DEVELOPER', 'ENGINEER', 'PROTOCOL', 'AUTHENTICATE', 'ENCRYPTION', 'NETWORK', 'SERVER'],
+      stages: [
+/* 0 mistakes */
+`
+  +---+
+  |   |
+      |
+      |
+      |
+      |
+=========`,
+/* 1 mistake */
+`
+  +---+
+  |   |
+  O   |
+      |
+      |
+      |
+=========`,
+/* 2 mistakes */
+`
+  +---+
+  |   |
+  O   |
+  |   |
+      |
+      |
+=========`,
+/* 3 mistakes */
+`
+  +---+
+  |   |
+  O   |
+ /|   |
+      |
+      |
+=========`,
+/* 4 mistakes */
+`
+  +---+
+  |   |
+  O   |
+ /|\\  |
+      |
+      |
+=========`,
+/* 5 mistakes */
+`
+  +---+
+  |   |
+  O   |
+ /|\\  |
+ /    |
+      |
+=========`,
+/* 6 mistakes */
+`
+  +---+
+  |   |
+  O   |
+ /|\\  |
+ / \\  |
+      |
+=========`
+      ]
+    };
+
+    let hangmanGameState = {};
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML;
@@ -304,6 +377,92 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       appendTextToTerminal(`\nDownloading transcript...`);
+    }
+
+    function displayHangmanState() {
+      const wordDisplay = hangmanGameState.word
+        .split('')
+        .map(letter => (hangmanGameState.guessedLetters.includes(letter) ? letter : '_'))
+        .join(' ');
+
+      const stageArt = hangmanGameData.stages[hangmanGameState.mistakes];
+      const guessedDisplay = `Guessed: ${hangmanGameState.guessedLetters.join(', ')}`;
+      
+      const output = `\n${stageArt}\n\n${wordDisplay}\n\n${guessedDisplay}\n\nEnter a letter:`;
+      appendTextToTerminal(output);
+    }
+
+    function startHangmanGame() {
+      awaitingResponseFor = 'hangman_game';
+      const word = hangmanGameData.words[Math.floor(Math.random() * hangmanGameData.words.length)];
+      hangmanGameState = {
+        word: word,
+        guessedLetters: [],
+        mistakes: 0
+      };
+
+      const gameScreen = `...INITIALIZING HANGMAN PROTOCOL...\nGuess the word. You have ${hangmanGameData.stages.length - 1} wrong guesses allowed.`;
+      typewriterEffect(gameScreen, () => {
+        displayHangmanState();
+        input.disabled = false;
+        input.focus();
+      });
+    }
+
+    function handleHangmanGuess(guess) {
+      guess = guess.toUpperCase();
+
+      // --- Input Validation ---
+      if (guess.length !== 1 || !/[A-Z]/.test(guess)) {
+        appendTextToTerminal(`\n> Invalid input. Please enter a single letter.\n`);
+        return;
+      }
+      if (hangmanGameState.guessedLetters.includes(guess)) {
+        appendTextToTerminal(`\n> You already guessed the letter '${guess}'. Try another.\n`);
+        return;
+      }
+
+      // --- Process Guess ---
+      hangmanGameState.guessedLetters.push(guess);
+
+      if (!hangmanGameState.word.includes(guess)) {
+        hangmanGameState.mistakes++;
+        appendTextToTerminal(`\n> INCORRECT!`);
+      } else {
+        appendTextToTerminal(`\n> CORRECT!`);
+      }
+
+      // --- Check for Win/Loss ---
+      const wordIsGuessed = hangmanGameState.word.split('').every(letter => hangmanGameState.guessedLetters.includes(letter));
+
+      if (wordIsGuessed) {
+        endHangmanGame(true);
+        return;
+      }
+
+      if (hangmanGameState.mistakes >= hangmanGameData.stages.length - 1) {
+        endHangmanGame(false);
+        return;
+      }
+
+      // --- Continue Game ---
+      displayHangmanState();
+    }
+
+    function endHangmanGame(won) {
+      awaitingResponseFor = null;
+      const finalWordDisplay = `\nThe word was: ${hangmanGameState.word}`;
+      appendTextToTerminal(finalWordDisplay);
+      
+      const message = won 
+        ? "\n...SUCCESS...\nYOU SURVIVED." 
+        : `\n...FAILURE...\n${hangmanGameData.stages[hangmanGameState.mistakes]}\nGAME OVER.`;
+        
+      typewriterEffect(message, () => {
+        appendTextToTerminal("\n\n");
+        input.disabled = false;
+        input.focus();
+      });
     }
 
     function startHackGame() {
@@ -408,6 +567,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`);
             // Don't reset awaitingResponseFor, so the user can try again.
           }
+          break;
+        case 'hangman_game':
+          handleHangmanGuess(response);
           break;
         case 'hack_game':
           handleHackGuess(response);
@@ -527,6 +689,10 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           .map(([key, value]) => `${key}. ${value.title}`)
           .join('\n');
         return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
+      },
+      hangman: () => {
+        startHangmanGame();
+        return null; // Signal that output is handled asynchronously
       },
       hack: () => {
         startHackGame();
