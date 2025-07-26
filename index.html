@@ -23,13 +23,12 @@
     .terminal-container {
       max-width: 900px;
       /* Add horizontal padding to indent the content from the edges */
-      padding: 10px 2em 0; /* Add top padding, horizontal padding is for centering */
+      padding: 0 2em; /* Horizontal padding for centering */
       box-sizing: border-box;
       margin: auto;
-      /* Flexbox layout to push footer to the bottom */
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+      /* Use height to ensure the container is exactly the viewport height */
+      height: 100vh;
+      position: relative; /* Set positioning context for the absolute footer */
     }
 
     .ascii-art {
@@ -44,12 +43,29 @@
       filter: drop-shadow(0 0 2px #00FF00);
     }
 
+    .content-wrapper {
+      overflow-y: auto; /* This makes the wrapper scrollable */
+      height: 100%; /* Make the wrapper fill the container's height */
+      box-sizing: border-box;
+      /* Add top padding, and bottom padding to create space for the footer */
+      padding: 10px 0 50px;
+      /* Hide scrollbar for different browsers */
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    .content-wrapper::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+
+    .content-wrapper.no-scroll-on-launch {
+      overflow-y: hidden;
+    }
+
     #terminal {
     position: relative;
     z-index: 2;
     filter: drop-shadow(0 0 4px #00FF00);
     white-space: pre-wrap; /* Ensure newlines in text are respected */
-    /* This area will now grow naturally with its content */
     }
 
     .centered-line {
@@ -85,15 +101,14 @@
     }
 
     footer {
+      position: absolute; /* Remove footer from the normal document flow */
+      bottom: 15px; /* Position it at the bottom of the container */
+      /* Align it with the container's horizontal padding */
+      left: 2em;
+      right: 2em;
       text-align: center;
-      padding: 15px 0;
       font-size: 12px;
       opacity: 0.6;
-    }
-
-    .spacer {
-      /* This empty div will grow to push the footer to the bottom */
-      flex-grow: 1;
     }
 
     /* CRT Flicker */
@@ -139,12 +154,13 @@
 </head>
 <body>
   <div class="terminal-container">
-    <div id="terminal"></div>
-    <div class="input-line">
-      <span>&gt; </span>
-      <div id="terminal-input" contenteditable="true" autofocus></div>
+    <div class="content-wrapper">
+      <div id="terminal"></div>
+      <div class="input-line">
+        <span>&gt; </span>
+        <div id="terminal-input" contenteditable="true" autofocus></div>
+      </div>
     </div>
-    <div class="spacer"></div>
     <footer>
       &copy; 2025 Matthew Emil Iglody
     </footer>
@@ -152,6 +168,7 @@
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
+    const contentWrapper = document.querySelector('.content-wrapper');
 
     const initialWelcomeHTML = `<div class="centered-line">MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL</div>
 <div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
@@ -376,7 +393,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         if (i < text.length) {
           typewriterContainer.textContent += text.charAt(i);
           i++;
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         } else {
           clearInterval(typingInterval);
           if (onComplete) onComplete();
@@ -680,6 +697,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       // Handle Enter to submit command
       else if (event.key === 'Enter') {
         event.preventDefault(); // Prevent adding a new line in the contenteditable div
+        // On the first command, re-enable scrolling for the content area.
+        contentWrapper.classList.remove('no-scroll-on-launch');
+
         if (currentInput === '') return;
 
         appendTextToTerminal(`\n> ${currentInput}`); // Display original casing
@@ -695,11 +715,13 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         }
 
         input.innerText = '';
-        window.scrollTo(0, document.body.scrollHeight);
+        contentWrapper.scrollTop = contentWrapper.scrollHeight;
       }
     });
 
     printWelcomeMessage();
+    // Initially disable scrolling in the content area for a clean launch.
+    contentWrapper.classList.add('no-scroll-on-launch');
 
     const commands = {
       help: () => {
@@ -717,7 +739,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           awaitingResponseFor = 'bio_continue';
           input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         });
         return null; // Signal that output is handled asynchronously
       },
@@ -728,7 +750,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           appendTextToTerminal("\n"); // Add spacing after the contact info
           input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         });
         return null; // Signal that output is handled asynchronously
       },
