@@ -8,6 +8,7 @@
   <style>
     html {
       height: 100%;
+      overflow: hidden; /* Prevent root-level scrollbars */
     }
     body {
     background-color: black;
@@ -16,7 +17,9 @@
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
     white-space: pre-wrap;
-    position: relative;
+    /* The body itself should fill the html container */
+    height: 100%;
+    overflow: hidden; /* Prevent the main page from ever scrolling */
     animation: flicker 0.2s infinite;
     }
 
@@ -26,9 +29,10 @@
       padding: 0 2em; /* Horizontal padding for centering */
       box-sizing: border-box;
       margin: auto;
-      /* Use height to ensure the container is exactly the viewport height */
-      height: 100vh;
-      position: relative; /* Set positioning context for the absolute footer */
+      /* Use flexbox to create a sticky footer layout */
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* Fill the body's height */
     }
 
     .ascii-art {
@@ -44,11 +48,11 @@
     }
 
     .content-wrapper {
+      flex-grow: 1; /* Allow this area to grow and push the footer down */
       overflow-y: auto; /* This makes the wrapper scrollable */
-      height: 100%; /* Make the wrapper fill the container's height */
+      min-height: 0; /* Fix for flexbox items with overflowing content */
       box-sizing: border-box;
-      /* Add top padding, and bottom padding to create space for the footer */
-      padding: 10px 0 50px;
+      padding-top: 10px; /* Give some space at the top */
       /* Hide scrollbar for different browsers */
       -ms-overflow-style: none;  /* IE and Edge */
       scrollbar-width: none;  /* Firefox */
@@ -101,12 +105,9 @@
     }
 
     footer {
-      position: absolute; /* Remove footer from the normal document flow */
-      bottom: 15px; /* Position it at the bottom of the container */
-      /* Align it with the container's horizontal padding */
-      left: 2em;
-      right: 2em;
+      flex-shrink: 0; /* Prevent the footer from shrinking */
       text-align: center;
+      padding: 15px 0;
       font-size: 12px;
       opacity: 0.6;
     }
@@ -162,7 +163,7 @@
       </div>
     </div>
     <footer>
-      &copy; 2025 Matthew Emil Iglody
+     <!-- &copy; 2025 Matthew Emil Iglody-->
     </footer>
   </div>
   <script>
