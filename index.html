@@ -15,7 +15,7 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
-    padding: 10px 5px; /* Reduced side padding for more width on mobile */
+    padding: 10px 5px 50px; /* Add bottom padding to prevent content from being hidden by the fixed footer */
     white-space: pre-wrap;
     position: relative;
     animation: flicker 0.2s infinite;
@@ -26,6 +26,17 @@
     .terminal-container {
     max-width: 900px;
     margin: auto;
+    }
+
+    .ascii-art {
+      /* Use clamp() to create a responsive font-size with min/max values */
+      font-size: clamp(4px, 1.4vw, 13px);
+      line-height: 1.1; /* Keep lines tight */
+      white-space: pre; /* Preserve whitespace and prevent wrapping */
+      overflow: hidden; /* Hide any minor overflow */
+      padding: 10px 0;
+      /* The filter from the parent #terminal is a bit strong for small text, so we reduce it */
+      filter: drop-shadow(0 0 2px #00FF00);
     }
 
     #terminal {
@@ -55,6 +66,19 @@
     font-size: inherit;
     outline: none;
     flex-grow: 1;
+    }
+
+    footer {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+      padding: 15px 0;
+      font-size: 12px;
+      opacity: 0.6;
+      /* Allow clicks to pass through to the body for focus */
+      pointer-events: none;
     }
 
     /* CRT Flicker */
@@ -106,14 +130,25 @@
       <input id="terminal-input" autofocus />
     </div>
   </div>
-
+  <footer>
+    &copy; 2025 Matthew Emil Iglody
+  </footer>
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
 
     const initialWelcomeHTML = `MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
 <div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
-
+<pre class="ascii-art">                                                                                                    
+    @@@.     @@@     -@@:             @@@                                                           
+     @@@    @@@@@    @@@              @@@                                                           
+     @@@    @@@@@    @@:    @@@@@@    @@@    @@@@@@.   @@@@@@@    @@@ @@@@@ @@@@@=     @@@@@@       
+      @@@  @@@ @@%  @@@   @@@    @@#  @@@   @@@   @@  @@@   @@@@  @@@@. @@@@@  @@@   @@@   .@@:     
+      @@@  @@. @@@  @@:   @@@@@@@@@@  @@@  @@@       @@@     @@@  @@@    @@@    @@#  @@@@@@@@@@     
+       @@@@@@  .@@=@@@    @@@         @@@  @@@       @@@     @@@  @@@    @@@    @@#  @@@            
+       @@@@@-   @@@@@:    @@@.        @@@   @@@   *@ =@@@   @@@#  @@@    @@@    @@#  @@@            
+        @@@@    .@@@@      #@@@@@@@   @@@    @@@@@@+   @@@@@@@    @@@    @@@    @@#   @@@@@@@@      
+</pre>
 > WELCOME USER
 
 <div class="centered-line">--- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---</div>
@@ -137,6 +172,26 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     let awaitingResponseFor = null; // State for multi-step commands
 
     const commandHistory = [];
+
+    const commandAliases = {
+      'h': 'help',
+      '?': 'help',
+      'b': 'bio',
+      'c': 'contact',
+      'wh': 'workhistory',
+      'jobs': 'workhistory',
+      'exp': 'workhistory',
+      'm': 'menu',
+      'game': 'hack',
+      'play': 'hack',
+      'cv': 'transfer',
+      'resume': 'transfer',
+      'history': 'logs',
+      'l': 'logs',
+      'cls': 'clear',
+      'q': 'exit',
+      'quit': 'exit'
+    };
 
     const logs = [
       "[LOG 1 - 07/24/2077 13:04:02] Overseer reports Vault 112 social conditioning protocol is proceeding as planned.",
@@ -207,12 +262,23 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       terminal.innerHTML = initialWelcomeHTML;
     }
 
+    function appendTextToTerminal(text) {
+      // Appending a text node is safer than innerHTML and respects the `white-space: pre-wrap` style.
+      terminal.appendChild(document.createTextNode(text));
+    }
+
     function typewriterEffect(text, onComplete) {
       let i = 0;
       input.disabled = true; // Disable input while typing
+
+      // Create a dedicated container for the typewriter text. This prevents
+      // re-rendering the entire terminal on each character and is more performant.
+      const typewriterContainer = document.createElement('span');
+      terminal.appendChild(typewriterContainer);
+
       const typingInterval = setInterval(() => {
         if (i < text.length) {
-          terminal.innerText += text.charAt(i);
+          typewriterContainer.textContent += text.charAt(i);
           i++;
           window.scrollTo(0, document.body.scrollHeight);
         } else {
@@ -235,7 +301,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      terminal.innerText += `\nDownloading transcript...`;
+      appendTextToTerminal(`\nDownloading transcript...`);
     }
 
     function startHackGame() {
@@ -256,7 +322,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     function handleHackGuess(guess) {
       guess = guess.toUpperCase();
       if (!hackGameData.words.includes(guess)) {
-        terminal.innerText += `\n> SYNTAX ERROR. UNKNOWN WORD.\n`;
+        appendTextToTerminal(`\n> SYNTAX ERROR. UNKNOWN WORD.\n`);
         return;
       }
 
@@ -278,14 +344,14 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           likeness++;
         }
       }
-      terminal.innerText += `\n> ACCESS DENIED.\n> LIKENESS=${likeness}\n> ${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n`;
+      appendTextToTerminal(`\n> ACCESS DENIED.\n> LIKENESS=${likeness}\n> ${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n`);
     }
 
     function endHackGame(won) {
       awaitingResponseFor = null;
       const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
       typewriterEffect(message, () => {
-        terminal.innerText += "\n\n";
+        appendTextToTerminal("\n\n");
         input.disabled = false;
         input.focus();
       });
@@ -295,10 +361,10 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       switch (awaitingResponseFor) {
         case 'exit_confirm':
           if (response === 'y' || response === 'yes') {
-            terminal.innerText += `\nWould you like a transcript of your activity? (y/n)`;
+            appendTextToTerminal(`\nWould you like a transcript of your activity? (y/n)`);
             awaitingResponseFor = 'transcript_prompt';
           } else {
-            terminal.innerText += `\nExit cancelled.\n\n`;
+            appendTextToTerminal(`\nExit cancelled.\n\n`);
             awaitingResponseFor = null;
           }
           break;
@@ -307,23 +373,23 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             downloadTranscript();
           }
           // Instead of exiting, ask for final confirmation.
-          terminal.innerText += `\n\nAre you sure you want to terminate the session? (y/n)`;
+          appendTextToTerminal(`\n\nAre you sure you want to terminate the session? (y/n)`);
           awaitingResponseFor = 'final_exit_confirm';
           break;
         case 'final_exit_confirm':
           if (response === 'y' || response === 'yes') {
-            terminal.innerText += `\n\nSESSION TERMINATED.\nGOODBYE.`;
+            appendTextToTerminal(`\n\nSESSION TERMINATED.\nGOODBYE.`);
             input.disabled = true;
             setTimeout(() => window.close(), 2000);
             awaitingResponseFor = null;
           } else {
-            terminal.innerText += `\nExit cancelled.\n\n`;
+            appendTextToTerminal(`\nExit cancelled.\n\n`);
             awaitingResponseFor = null;
           }
           break;
         case 'workhistory_select':
           if (response === 'back') {
-            terminal.innerText += `\nReturning to main prompt.\n\n`;
+            appendTextToTerminal(`\nReturning to main prompt.\n\n`);
             awaitingResponseFor = null;
             break;
           }
@@ -332,12 +398,12 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             awaitingResponseFor = null; // Valid selection, so we're done with the prompt.
             const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
             typewriterEffect(fullText, () => {
-              terminal.innerText += "\n\n";
+              appendTextToTerminal("\n\n");
               input.disabled = false;
               input.focus();
             });
           } else {
-            terminal.innerText += `\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`;
+            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`);
             // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
@@ -347,40 +413,95 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       }
     }
 
+    let historyIndex = 0;
+
     input.addEventListener('keydown', function(event) {
-      if (event.key !== 'Enter') return;
+      const currentInput = input.value.trim();
+      const currentInputLower = currentInput.toLowerCase();
 
-      const commandText = input.value.trim().toLowerCase();
-      if (commandText === '') return;
-
-      terminal.innerText += `\n> ${input.value.trim()}`; // Display original casing
-
-      if (awaitingResponseFor) {
-        terminal.innerText += `\n`;
-        handleResponse(commandText);
-      } else {
-        terminal.innerText += `\n`;
-        commandHistory.push({ text: input.value.trim(), timestamp: new Date() });
-        handleCommand(commandText);
+      // Handle up/down arrow for command history
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (historyIndex > 0) {
+          historyIndex--;
+          input.value = commandHistory[historyIndex].text;
+          // Move cursor to the end of the input for a better user experience
+          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+        }
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (historyIndex < commandHistory.length - 1) {
+          historyIndex++;
+          input.value = commandHistory[historyIndex].text;
+          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+        } else {
+          // If we are at the end of history, going down again clears the input for a new command
+          historyIndex = commandHistory.length;
+          input.value = '';
+        }
       }
+      // Handle Tab for command completion
+      else if (event.key === 'Tab') {
+        event.preventDefault();
+        if (currentInputLower === '') return;
 
-      input.value = '';
-      window.scrollTo(0, document.body.scrollHeight);
+        const allPossibleCommands = [...Object.keys(commands), ...Object.keys(commandAliases)];
+        const matches = allPossibleCommands.filter(c => c.startsWith(currentInputLower));
+
+        if (matches.length === 1) {
+          input.value = matches[0];
+        } else if (matches.length > 1) {
+          // Find the longest common prefix among all matches
+          let sortedMatches = [...matches].sort();
+          let first = sortedMatches[0];
+          let last = sortedMatches[sortedMatches.length - 1];
+          let i = 0;
+          while (i < first.length && first.charAt(i) === last.charAt(i)) {
+            i++;
+          }
+          const commonPrefix = first.substring(0, i);
+          if (commonPrefix.length > currentInput.length) {
+            input.value = commonPrefix;
+          }
+        }
+      }
+      // Handle Enter to submit command
+      else if (event.key === 'Enter') {
+        if (currentInput === '') return;
+
+        appendTextToTerminal(`\n> ${currentInput}`); // Display original casing
+
+        if (awaitingResponseFor) {
+          appendTextToTerminal(`\n`);
+          handleResponse(currentInputLower);
+        } else {
+          appendTextToTerminal(`\n`);
+          commandHistory.push({ text: currentInput, timestamp: new Date() });
+          historyIndex = commandHistory.length; // Reset history index
+          handleCommand(currentInputLower);
+        }
+
+        input.value = '';
+        window.scrollTo(0, document.body.scrollHeight);
+      }
     });
 
     printWelcomeMessage();
 
     const commands = {
       help: () => {
-        return 'AVAILABLE COMMANDS:\n' + Object.entries(commandDescriptions)
-          .map(([command, description]) => `- ${command} : ${description}`)
-          .join('\n');
+        let helpText = 'AVAILABLE COMMANDS:\n';
+        Object.entries(commandDescriptions).forEach(([command, description]) => {
+          const aliases = Object.keys(commandAliases).filter(alias => commandAliases[alias] === command);
+          helpText += `- ${command}${aliases.length > 0 ? ` (or: ${aliases.join(', ')})` : ''} : ${description}\n`;
+        });
+        return helpText.trim();
       },
       bio: () => {
         const bioText = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
         typewriterEffect(bioText, () => {
           // This function runs after the typing is complete
-          terminal.innerText += "\n\n"; // Add spacing after the bio
+          appendTextToTerminal("\n\n"); // Add spacing after the bio
           input.disabled = false; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
@@ -391,7 +512,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         const contactText = "Cell: 732-573-8567\nEmail: mattiglody@gmail.com";
         typewriterEffect(contactText, () => {
           // This function runs after the typing is complete
-          terminal.innerText += "\n\n"; // Add spacing after the contact info
+          appendTextToTerminal("\n\n"); // Add spacing after the contact info
           input.disabled = false; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
@@ -433,15 +554,17 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     };
 
     function handleCommand(cmd) {
+      const resolvedCmd = commandAliases[cmd] || cmd;
+
       // The 'clear' command is special as it modifies the terminal directly
-      if (cmd === 'clear') {
+      if (resolvedCmd === 'clear') {
         printWelcomeMessage();
         return;
       }
 
-      const commandFn = commands[cmd];
+      const commandFn = commands[resolvedCmd];
       if (!commandFn) {
-        terminal.innerText += `Unrecognized command: '${cmd}'\nType 'help' for options.\n\n`;
+        appendTextToTerminal(`Unrecognized command: '${cmd}'\nType 'help' (or 'h') for options.\n\n`);
         return;
       }
 
@@ -451,8 +574,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       if (output === null) return;
 
       // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (['help', 'exit', 'workhistory', 'hack'].includes(cmd)) ? "\n" : "\n\n";
-      terminal.innerText += output + trailingNewlines;
+      const trailingNewlines = (['help', 'exit', 'workhistory', 'hack'].includes(resolvedCmd)) ? "\n" : "\n\n";
+      appendTextToTerminal(output + trailingNewlines);
     }
   </script>
 </body>
