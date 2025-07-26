@@ -43,6 +43,7 @@
     position: relative;
     z-index: 2;
     filter: drop-shadow(0 0 4px #00FF00);
+    white-space: pre-wrap; /* Ensure newlines in text are respected */
     }
 
     .centered-line {
@@ -158,7 +159,8 @@ SYSTEM STATUS: STABLE
 USER PRIVILEGES: READ/VIEW/NAVIGATE
 
 > SYSTEM ONLINE.
-> TYPE "help" FOR AVAILABLE COMMANDS.`;
+> TYPE "help" FOR AVAILABLE COMMANDS.
+`;
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     document.body.addEventListener('click', (event) => {
