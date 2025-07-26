@@ -24,13 +24,17 @@
     }
 
     .terminal-container {
-    max-width: 900px;
-    margin: auto;
+      max-width: 900px;
+      /* Add horizontal padding to indent the content from the edges */
+      padding: 0 2em;
+      box-sizing: border-box;
+      margin: auto;
     }
 
     .ascii-art {
       /* Use clamp() to create a responsive font-size with min/max values */
       font-size: clamp(4px, 1.4vw, 13px);
+      text-align: center;
       line-height: 1.1; /* Keep lines tight */
       white-space: pre; /* Preserve whitespace and prevent wrapping */
       overflow: hidden; /* Hide any minor overflow */
@@ -59,7 +63,7 @@
     flex-shrink: 0;
     }
 
-    .input-line input {
+    #terminal-input {
     background: black;
     border: none;
     color: #00FF00;
@@ -67,6 +71,13 @@
     font-size: inherit;
     outline: none;
     flex-grow: 1;
+    /* Allow the input area to wrap text */
+    white-space: pre-wrap;
+    word-break: break-word;
+    /* Ensure it has a minimum height and consistent line height */
+    min-height: 1.2em;
+    line-height: 1.2em;
+    padding: 0; /* Remove any default padding from the div */
     }
 
     footer {
@@ -128,7 +139,7 @@
     <div id="terminal"></div>
     <div class="input-line">
       <span>&gt; </span>
-      <input id="terminal-input" autofocus />
+      <div id="terminal-input" contenteditable="true" autofocus></div>
     </div>
   </div>
   <footer>
@@ -138,7 +149,7 @@
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
 
-    const initialWelcomeHTML = `MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
+    const initialWelcomeHTML = `<div class="centered-line">MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL</div>
 <div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
 <pre class="ascii-art">                                                                                                    
     @@@.     @@@     -@@:             @@@                                                           
@@ -150,9 +161,9 @@
        @@@@@-   @@@@@:    @@@.        @@@   @@@   *@ =@@@   @@@#  @@@    @@@    @@#  @@@            
         @@@@    .@@@@      #@@@@@@@   @@@    @@@@@@+   @@@@@@@    @@@    @@@    @@#   @@@@@@@@      
 </pre>
-> WELCOME USER
 
 <div class="centered-line">--- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---</div>
+> WELCOME USER
 
 INITIALIZING SYSTEM...
 SYSTEM STATUS: STABLE
@@ -255,6 +266,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       }
     };
 
+    const bioTextPart1 = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
+    const bioTextPart2 = "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]";
+
     const hackGameData = {
       words: ['SYSTEMS', 'ROUTERS', 'GATEWAY', 'NETWORK', 'CIRCUIT', 'ANALYZE', 'CONNECT', 'FIREWALL', 'PROTOCOL', 'DATABASE'],
       attempts: 4
@@ -344,7 +358,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
     function typewriterEffect(text, onComplete) {
       let i = 0;
-      input.disabled = true; // Disable input while typing
+      input.contentEditable = 'false'; // Disable input while typing
 
       // Create a dedicated container for the typewriter text. This prevents
       // re-rendering the entire terminal on each character and is more performant.
@@ -361,6 +375,16 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           if (onComplete) onComplete();
         }
       }, 30); // Adjust typing speed here (in milliseconds)
+    }
+
+    function moveCursorToEnd(element) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(element);
+      range.collapse(false); // false collapses to the end
+      selection.removeAllRanges();
+      selection.addRange(range);
+      element.focus();
     }
 
     function downloadTranscript() {
@@ -404,7 +428,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const gameScreen = `...INITIALIZING HANGMAN PROTOCOL...\nGuess the word. You have ${hangmanGameData.stages.length - 1} wrong guesses allowed.`;
       typewriterEffect(gameScreen, () => {
         displayHangmanState();
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -460,7 +484,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         
       typewriterEffect(message, () => {
         appendTextToTerminal("\n\n");
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -475,7 +499,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
       const gameScreen = `...DECRYPTING...\nPASSWORD REQUIRED.\n${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n\n${hackGameData.words.join('   ')}\n\nENTER PASSWORD:`;
       typewriterEffect(gameScreen, () => {
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -513,7 +537,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
       typewriterEffect(message, () => {
         appendTextToTerminal("\n\n");
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -540,11 +564,24 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         case 'final_exit_confirm':
           if (response === 'y' || response === 'yes') {
             appendTextToTerminal(`\n\nSESSION TERMINATED.\nGOODBYE.`);
-            input.disabled = true;
+            input.contentEditable = 'false';
             setTimeout(() => window.close(), 2000);
             awaitingResponseFor = null;
           } else {
             appendTextToTerminal(`\nExit cancelled.\n\n`);
+            awaitingResponseFor = null;
+          }
+          break;
+        case 'bio_continue':
+          if (response === 'y' || response === 'yes') {
+            awaitingResponseFor = null; // Reset state before async operation
+            typewriterEffect(`\n\n${bioTextPart2}`, () => {
+              appendTextToTerminal("\n\n");
+              input.contentEditable = 'true';
+              input.focus();
+            });
+          } else {
+            appendTextToTerminal(`\n\nReturning to main prompt.\n\n`);
             awaitingResponseFor = null;
           }
           break;
@@ -560,7 +597,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
             typewriterEffect(fullText, () => {
               appendTextToTerminal("\n\n");
-              input.disabled = false;
+              input.contentEditable = 'true';
               input.focus();
             });
           } else {
@@ -580,7 +617,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     let historyIndex = 0;
 
     input.addEventListener('keydown', function(event) {
-      const currentInput = input.value.trim();
+      // Use innerText for contenteditable div
+      const rawInput = input.innerText;
+      const currentInput = rawInput.trim();
       const currentInputLower = currentInput.toLowerCase();
 
       // Handle up/down arrow for command history
@@ -588,20 +627,20 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         event.preventDefault();
         if (historyIndex > 0) {
           historyIndex--;
-          input.value = commandHistory[historyIndex].text;
+          input.innerText = commandHistory[historyIndex].text;
           // Move cursor to the end of the input for a better user experience
-          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          setTimeout(() => moveCursorToEnd(input), 0);
         }
       } else if (event.key === 'ArrowDown') {
         event.preventDefault();
         if (historyIndex < commandHistory.length - 1) {
           historyIndex++;
-          input.value = commandHistory[historyIndex].text;
-          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          input.innerText = commandHistory[historyIndex].text;
+          setTimeout(() => moveCursorToEnd(input), 0);
         } else {
           // If we are at the end of history, going down again clears the input for a new command
           historyIndex = commandHistory.length;
-          input.value = '';
+          input.innerText = '';
         }
       }
       // Handle Tab for command completion
@@ -613,7 +652,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         const matches = allPossibleCommands.filter(c => c.startsWith(currentInputLower));
 
         if (matches.length === 1) {
-          input.value = matches[0];
+          input.innerText = matches[0];
+          setTimeout(() => moveCursorToEnd(input), 0);
         } else if (matches.length > 1) {
           // Find the longest common prefix among all matches
           let sortedMatches = [...matches].sort();
@@ -625,12 +665,14 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           }
           const commonPrefix = first.substring(0, i);
           if (commonPrefix.length > currentInput.length) {
-            input.value = commonPrefix;
+            input.innerText = commonPrefix;
+            setTimeout(() => moveCursorToEnd(input), 0);
           }
         }
       }
       // Handle Enter to submit command
       else if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent adding a new line in the contenteditable div
         if (currentInput === '') return;
 
         appendTextToTerminal(`\n> ${currentInput}`); // Display original casing
@@ -645,7 +687,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           handleCommand(currentInputLower);
         }
 
-        input.value = '';
+        input.innerText = '';
         window.scrollTo(0, document.body.scrollHeight);
       }
     });
@@ -662,11 +704,11 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         return helpText.trim();
       },
       bio: () => {
-        const bioText = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
-        typewriterEffect(bioText, () => {
+        typewriterEffect(bioTextPart1, () => {
           // This function runs after the typing is complete
-          appendTextToTerminal("\n\n"); // Add spacing after the bio
-          input.disabled = false; // Re-enable the input field
+          appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
+          awaitingResponseFor = 'bio_continue';
+          input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
         });
@@ -677,7 +719,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         typewriterEffect(contactText, () => {
           // This function runs after the typing is complete
           appendTextToTerminal("\n\n"); // Add spacing after the contact info
-          input.disabled = false; // Re-enable the input field
+          input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
           window.scrollTo(0, document.body.scrollHeight);
         });
