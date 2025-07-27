@@ -192,6 +192,8 @@
     const input = document.getElementById('terminal-input');
     const contentWrapper = document.querySelector('.content-wrapper');
 
+    let activeTypingInterval = null; // To manage the typewriter effect
+
     const initialWelcomeHTML = `<div class="centered-line">MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL</div>
 <div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
 <pre class="ascii-art">                                                                                                    
@@ -214,7 +216,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
 > SYSTEM ONLINE.
 
-> TYPE "help" FOR AVAILABLE COMMANDS.
+> TYPE "help" FOR AVAILABLE COMMANDS (not case sensitive)
 `;
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
@@ -223,6 +225,23 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       // This is to avoid interfering with text selection inside the input field.
       if (event.target !== input) {
         input.focus();
+      }
+    });
+
+    // Global keydown listener for cancellation (Ctrl+C)
+    // This needs to be global to catch the event even when the input field is disabled (e.g., during typewriter effect).
+    document.addEventListener('keydown', function(event) {
+      if (event.ctrlKey && event.key.toLowerCase() === 'c') {
+        // We only want to act if a process is running to avoid interfering with browser's native copy function.
+        if (awaitingResponseFor || activeTypingInterval) {
+          event.preventDefault();
+          
+          // Display the interrupt signal. Since the input field might be disabled,
+          // we can't rely on its content. We'll just show the signal at the point of interruption.
+          appendTextToTerminal('^C');
+          
+          cancelCurrentProcess();
+        }
       }
     });
 
@@ -249,7 +268,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'l': 'logs',
       'cls': 'clear',
       'q': 'exit',
-      'quit': 'exit'
+      'quit': 'exit',
+      'stop': 'cancel'
     };
 
     const logs = [
@@ -290,7 +310,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
-      'exit': 'Close the terminal interface'
+      'exit': 'Close the terminal interface',
+      'cancel': 'Cancel the current running process or command (or use Ctrl+C)'
     };
 
     const workHistoryDetails = {
@@ -403,6 +424,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     }
 
     function typewriterEffect(text, onComplete) {
+      if (activeTypingInterval) {
+        clearInterval(activeTypingInterval);
+      }
       let i = 0;
       input.contentEditable = 'false'; // Disable input while typing
 
@@ -411,16 +435,34 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const typewriterContainer = document.createElement('span');
       terminal.appendChild(typewriterContainer);
 
-      const typingInterval = setInterval(() => {
+      activeTypingInterval = setInterval(() => {
         if (i < text.length) {
           typewriterContainer.textContent += text.charAt(i);
           i++;
           contentWrapper.scrollTop = contentWrapper.scrollHeight;
         } else {
-          clearInterval(typingInterval);
+          clearInterval(activeTypingInterval);
+          activeTypingInterval = null; // Reset the handle
           if (onComplete) onComplete();
         }
       }, 30); // Adjust typing speed here (in milliseconds)
+    }
+
+    function cancelCurrentProcess() {
+      if (!awaitingResponseFor && !activeTypingInterval) {
+        return false; // Nothing to cancel
+      }
+
+      if (activeTypingInterval) {
+        clearInterval(activeTypingInterval);
+        activeTypingInterval = null;
+      }
+      awaitingResponseFor = null;
+
+      appendTextToTerminal(`\n\n[PROCESS CANCELLED]\nReturning to main prompt.\n`);
+      input.contentEditable = 'true';
+      input.focus();
+      return true;
     }
 
     function moveCursorToEnd(element) {
@@ -726,7 +768,14 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
         appendTextToTerminal(`\n> ${currentInput}`); // Display original casing
 
-        if (awaitingResponseFor) {
+        const resolvedForCancel = commandAliases[currentInputLower] || currentInputLower;
+
+        // --- Special 'cancel' command to interrupt processes ---
+        if (resolvedForCancel === 'cancel') {
+          if (!cancelCurrentProcess()) { // The typed command doesn't show ^C
+            appendTextToTerminal(`\nNo active process to cancel.\n`);
+          }
+        } else if (awaitingResponseFor) {
           appendTextToTerminal(`\n`);
           handleResponse(currentInputLower);
         } else {
