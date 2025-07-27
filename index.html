@@ -151,6 +151,27 @@
     z-index: 0;
     pointer-events: none;
   }
+
+  /* --- Mobile Optimizations --- */
+  @media (max-width: 768px) {
+    .terminal-container {
+      padding: 0 1em; /* Reduce horizontal padding for more content space */
+    }
+
+    .ascii-art {
+      display: none; /* Hide wide ASCII art on small screens as it won't fit */
+    }
+
+    body {
+      /* Use a slightly larger font on mobile for better readability */
+      font-size: clamp(15px, 4vw, 16px);
+    }
+
+    .input-line {
+      /* Add some space at the very bottom to avoid the on-screen keyboard feeling too cramped */
+      padding-bottom: 0.5em;
+    }
+  }
   </style>
 </head>
 <body>
@@ -159,7 +180,7 @@
       <div id="terminal"></div>
       <div class="input-line">
         <span>&gt; </span>
-        <div id="terminal-input" contenteditable="true" autofocus></div>
+        <div id="terminal-input" contenteditable="true"></div>
       </div>
     </div>
     <footer>
