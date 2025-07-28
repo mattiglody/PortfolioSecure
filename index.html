@@ -793,11 +793,39 @@
 
     const commands = {
       help: () => {
-        let helpText = 'AVAILABLE COMMANDS:\n';
-        Object.entries(commandDescriptions).forEach(([command, description]) => {
-          const aliases = Object.keys(commandAliases).filter(alias => commandAliases[alias] === command);
-          helpText += `- ${command}${aliases.length > 0 ? ` (or: ${aliases.join(', ')})` : ''} : ${description}\n`;
-        });
+        const isMobile = window.innerWidth <= 768; // Match the CSS breakpoint
+
+        const commandToAliases = Object.entries(commandAliases).reduce((acc, [alias, command]) => {
+          (acc[command] = acc[command] || []).push(alias);
+          return acc;
+        }, {});
+
+        let helpText = 'AVAILABLE COMMANDS:\n\n';
+
+        if (isMobile) {
+          // Mobile-friendly stacked view for better readability
+          const labelWidth = 10;
+          Object.entries(commandDescriptions).forEach(([command, description]) => {
+            const aliases = (commandToAliases[command] || []).join(', ');
+            helpText += `${'COMMAND:'.padEnd(labelWidth)}${command}\n`;
+            if (aliases) {
+              helpText += `${'ALIASES:'.padEnd(labelWidth)}${aliases}\n`;
+            }
+            helpText += `${'DESC:'.padEnd(labelWidth)}${description}\n\n`;
+          });
+        } else {
+          // Desktop table view
+          const commandColWidth = 12;
+          const aliasesColWidth = 15;
+
+          helpText += 'COMMAND'.padEnd(commandColWidth) + 'ALIASES'.padEnd(aliasesColWidth) + 'DESCRIPTION\n';
+          helpText += '-------'.padEnd(commandColWidth) + '-------'.padEnd(aliasesColWidth) + '-----------\n';
+
+          Object.entries(commandDescriptions).forEach(([command, description]) => {
+            const aliases = (commandToAliases[command] || []).join(', ');
+            helpText += `${command.padEnd(commandColWidth)}${aliases.padEnd(aliasesColWidth)}${description}\n`;
+          });
+        }
         return helpText.trim();
       },
       bio: () => {
