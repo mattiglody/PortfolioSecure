@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Secure Server</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico"> 
   <style>
     html {
       height: 100%;
+      overflow: hidden; /* Prevent root-level scrollbars */
     }
     body {
     background-color: black;
@@ -15,28 +16,53 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(14px, 2.5vw, 15px); /* Slightly smaller max font-size for a more 'zoomed-out' feel */
     margin: 0;
-    padding: 10px 5px 50px; /* Add bottom padding to prevent content from being hidden by the fixed footer */
     white-space: pre-wrap;
-    position: relative;
+    /* The body itself should fill the html container */
+    height: 100%;
+    overflow: hidden; /* Prevent the main page from ever scrolling */
     animation: flicker 0.2s infinite;
-    min-height: 100%; /* Use min-height for better layout stability with virtual keyboards */
-    box-sizing: border-box;
     }
 
     .terminal-container {
-    max-width: 900px;
-    margin: auto;
+      max-width: 900px;
+      /* Add horizontal padding to indent the content from the edges */
+      padding: 0 2em; /* Horizontal padding for centering */
+      box-sizing: border-box;
+      margin: auto;
+      /* Use flexbox to create a sticky footer layout */
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* Fill the body's height */
     }
 
     .ascii-art {
       /* Use clamp() to create a responsive font-size with min/max values */
       font-size: clamp(4px, 1.4vw, 13px);
+      text-align: center;
       line-height: 1.1; /* Keep lines tight */
       white-space: pre; /* Preserve whitespace and prevent wrapping */
       overflow: hidden; /* Hide any minor overflow */
       padding: 10px 0;
       /* The filter from the parent #terminal is a bit strong for small text, so we reduce it */
       filter: drop-shadow(0 0 2px #00FF00);
+    }
+
+    .content-wrapper {
+      flex-grow: 1; /* Allow this area to grow and push the footer down */
+      overflow-y: auto; /* This makes the wrapper scrollable */
+      min-height: 0; /* Fix for flexbox items with overflowing content */
+      box-sizing: border-box;
+      padding-top: 0; /* Removed padding to move content higher */
+      /* Hide scrollbar for different browsers */
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    .content-wrapper::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+
+    .content-wrapper.no-scroll-on-launch {
+      overflow-y: hidden;
     }
 
     #terminal {
@@ -52,14 +78,16 @@
 
     .input-line {
     display: flex;
-    padding: 5px 0; /* Add some vertical space to the input line */
+    /* Use margin to create a consistent space above the input line */
+    /* Set margin to one line-height to create a full blank line of space */
+    margin-top: 1.2em;
     }
 
     .input-line span {
     flex-shrink: 0;
     }
 
-    .input-line input {
+    #terminal-input {
     background: black;
     border: none;
     color: #00FF00;
@@ -67,19 +95,21 @@
     font-size: inherit;
     outline: none;
     flex-grow: 1;
+    /* Allow the input area to wrap text */
+    white-space: pre-wrap;
+    word-break: break-word;
+    /* Ensure it has a minimum height and consistent line height */
+    min-height: 1.2em;
+    line-height: 1.2em;
+    padding: 0; /* Remove any default padding from the div */
     }
 
     footer {
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 100%;
+      flex-shrink: 0; /* Prevent the footer from shrinking */
       text-align: center;
       padding: 15px 0;
       font-size: 12px;
       opacity: 0.6;
-      /* Allow clicks to pass through to the body for focus */
-      pointer-events: none;
     }
 
     /* CRT Flicker */
@@ -121,25 +151,51 @@
     z-index: 0;
     pointer-events: none;
   }
+
+  /* --- Mobile Optimizations --- */
+  @media (max-width: 768px) {
+    .terminal-container {
+      padding: 0 1em; /* Reduce horizontal padding for more content space */
+    }
+
+    .ascii-art {
+      display: none; /* Hide wide ASCII art on small screens as it won't fit */
+    }
+
+    body {
+      /* Use a slightly larger font on mobile for better readability */
+      font-size: clamp(15px, 4vw, 16px);
+    }
+
+    .input-line {
+      /* Add some space at the very bottom to avoid the on-screen keyboard feeling too cramped */
+      padding-bottom: 0.5em;
+    }
+  }
   </style>
 </head>
 <body>
   <div class="terminal-container">
-    <div id="terminal"></div>
-    <div class="input-line">
-      <span>&gt; </span>
-      <input id="terminal-input" autofocus />
+    <div class="content-wrapper">
+      <div id="terminal"></div>
+      <div class="input-line">
+        <span>&gt; </span>
+        <div id="terminal-input" contenteditable="true"></div>
+      </div>
     </div>
+    <footer>
+     <!-- &copy; 2025 Matthew Emil Iglody-->
+    </footer>
   </div>
-  <footer>
-    &copy; 2025 Matthew Emil Iglody
-  </footer>
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
+    const contentWrapper = document.querySelector('.content-wrapper');
 
-    const initialWelcomeHTML = `MATTHEW IGLODY | SECURE SERVER | (TM) SECLINK PROTOCOL
-<div class="centered-line">------- ONE TIME PASSWORD ACCEPTED -------</div>
+    let activeTypingInterval = null; // To manage the typewriter effect
+
+    const initialWelcomeHTML = `<div class="centered-line">SECURE SERVER LINK (TM)<br>MATTHEW IGLODY</div>
+<div class="centered-line">-----ONE TIME PASSWORD ACCEPTED-----</div>
 <pre class="ascii-art">                                                                                                    
     @@@.     @@@     -@@:             @@@                                                           
      @@@    @@@@@    @@@              @@@                                                           
@@ -150,16 +206,14 @@
        @@@@@-   @@@@@:    @@@.        @@@   @@@   *@ =@@@   @@@#  @@@    @@@    @@#  @@@            
         @@@@    .@@@@      #@@@@@@@   @@@    @@@@@@+   @@@@@@@    @@@    @@@    @@#   @@@@@@@@      
 </pre>
+
+> ACCESSING PROFESSIONAL PORTFOLIO...
+
+> INTERFACE PRIVILEGES: READ
+
 > WELCOME USER
 
-<div class="centered-line">--- ACCESSING PROFESSIONAL PORTFOLIO SYSTEM ---</div>
-
-INITIALIZING SYSTEM...
-SYSTEM STATUS: STABLE
-USER PRIVILEGES: READ/VIEW/NAVIGATE
-
-> SYSTEM ONLINE.
-> TYPE "help" FOR AVAILABLE COMMANDS.
+> TYPE "help" FOR AVAILABLE COMMANDS (not case sensitive)
 `;
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
@@ -168,6 +222,23 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       // This is to avoid interfering with text selection inside the input field.
       if (event.target !== input) {
         input.focus();
+      }
+    });
+
+    // Global keydown listener for cancellation (Ctrl+C)
+    // This needs to be global to catch the event even when the input field is disabled (e.g., during typewriter effect).
+    document.addEventListener('keydown', function(event) {
+      if (event.ctrlKey && event.key.toLowerCase() === 'c') {
+        // We only want to act if a process is running to avoid interfering with browser's native copy function.
+        if (awaitingResponseFor || activeTypingInterval) {
+          event.preventDefault();
+          
+          // Display the interrupt signal. Since the input field might be disabled,
+          // we can't rely on its content. We'll just show the signal at the point of interruption.
+          appendTextToTerminal('^C');
+          
+          cancelCurrentProcess();
+        }
       }
     });
 
@@ -183,6 +254,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'wh': 'workhistory',
       'jobs': 'workhistory',
       'exp': 'workhistory',
+      'li': 'linkedin',
       'm': 'menu',
       'game': 'hack',
       'play': 'hack',
@@ -193,7 +265,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'l': 'logs',
       'cls': 'clear',
       'q': 'exit',
-      'quit': 'exit'
+      'quit': 'exit',
+      'stop': 'cancel'
     };
 
     const logs = [
@@ -227,13 +300,15 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       'bio': 'Display my professional bio',
       'contact': 'Display my contact information',
       'workhistory': 'Display my professional work history',
+      'linkedin': 'Open my LinkedIn profile in a new tab',
       'menu': 'Display a list of portfolio items',
       'hack': 'Initiate a security breach simulation',
       'hangman': 'Play a classic game of hangman',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
-      'exit': 'Close the terminal interface'
+      'exit': 'Close the terminal interface',
+      'cancel': 'Cancel the current running process or command (or use Ctrl+C)'
     };
 
     const workHistoryDetails = {
@@ -254,6 +329,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         description: 'Placeholder text for your fourth role. Describe your responsibilities and achievements here.'
       }
     };
+
+    const bioTextPart1 = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
+    const bioTextPart2 = "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]";
 
     const hackGameData = {
       words: ['SYSTEMS', 'ROUTERS', 'GATEWAY', 'NETWORK', 'CIRCUIT', 'ANALYZE', 'CONNECT', 'FIREWALL', 'PROTOCOL', 'DATABASE'],
@@ -343,24 +421,55 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     }
 
     function typewriterEffect(text, onComplete) {
+      if (activeTypingInterval) {
+        clearInterval(activeTypingInterval);
+      }
       let i = 0;
-      input.disabled = true; // Disable input while typing
+      input.contentEditable = 'false'; // Disable input while typing
 
       // Create a dedicated container for the typewriter text. This prevents
       // re-rendering the entire terminal on each character and is more performant.
       const typewriterContainer = document.createElement('span');
       terminal.appendChild(typewriterContainer);
 
-      const typingInterval = setInterval(() => {
+      activeTypingInterval = setInterval(() => {
         if (i < text.length) {
           typewriterContainer.textContent += text.charAt(i);
           i++;
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         } else {
-          clearInterval(typingInterval);
+          clearInterval(activeTypingInterval);
+          activeTypingInterval = null; // Reset the handle
           if (onComplete) onComplete();
         }
       }, 30); // Adjust typing speed here (in milliseconds)
+    }
+
+    function cancelCurrentProcess() {
+      if (!awaitingResponseFor && !activeTypingInterval) {
+        return false; // Nothing to cancel
+      }
+
+      if (activeTypingInterval) {
+        clearInterval(activeTypingInterval);
+        activeTypingInterval = null;
+      }
+      awaitingResponseFor = null;
+
+      appendTextToTerminal(`\n\n[PROCESS CANCELLED]\nReturning to main prompt.\n`);
+      input.contentEditable = 'true';
+      input.focus();
+      return true;
+    }
+
+    function moveCursorToEnd(element) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(element);
+      range.collapse(false); // false collapses to the end
+      selection.removeAllRanges();
+      selection.addRange(range);
+      element.focus();
     }
 
     function downloadTranscript() {
@@ -404,7 +513,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       const gameScreen = `...INITIALIZING HANGMAN PROTOCOL...\nGuess the word. You have ${hangmanGameData.stages.length - 1} wrong guesses allowed.`;
       typewriterEffect(gameScreen, () => {
         displayHangmanState();
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -459,8 +568,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         : `\n...FAILURE...\n${hangmanGameData.stages[hangmanGameState.mistakes]}\nGAME OVER.`;
         
       typewriterEffect(message, () => {
-        appendTextToTerminal("\n\n");
-        input.disabled = false;
+        appendTextToTerminal("\n");
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -475,7 +584,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
       const gameScreen = `...DECRYPTING...\nPASSWORD REQUIRED.\n${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n\n${hackGameData.words.join('   ')}\n\nENTER PASSWORD:`;
       typewriterEffect(gameScreen, () => {
-        input.disabled = false;
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -512,8 +621,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       awaitingResponseFor = null;
       const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
       typewriterEffect(message, () => {
-        appendTextToTerminal("\n\n");
-        input.disabled = false;
+        appendTextToTerminal("\n");
+        input.contentEditable = 'true';
         input.focus();
       });
     }
@@ -525,7 +634,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             appendTextToTerminal(`\nWould you like a transcript of your activity? (y/n)`);
             awaitingResponseFor = 'transcript_prompt';
           } else {
-            appendTextToTerminal(`\nExit cancelled.\n\n`);
+            appendTextToTerminal(`\nExit cancelled.\n`);
             awaitingResponseFor = null;
           }
           break;
@@ -540,17 +649,30 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         case 'final_exit_confirm':
           if (response === 'y' || response === 'yes') {
             appendTextToTerminal(`\n\nSESSION TERMINATED.\nGOODBYE.`);
-            input.disabled = true;
+            input.contentEditable = 'false';
             setTimeout(() => window.close(), 2000);
             awaitingResponseFor = null;
           } else {
-            appendTextToTerminal(`\nExit cancelled.\n\n`);
+            appendTextToTerminal(`\nExit cancelled.\n`);
+            awaitingResponseFor = null;
+          }
+          break;
+        case 'bio_continue':
+          if (response === 'y' || response === 'yes') {
+            awaitingResponseFor = null; // Reset state before async operation
+            typewriterEffect(`\n${bioTextPart2}`, () => {
+              appendTextToTerminal("\n");
+              input.contentEditable = 'true';
+              input.focus();
+            });
+          } else {
+            appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
           }
           break;
         case 'workhistory_select':
           if (response === 'back') {
-            appendTextToTerminal(`\nReturning to main prompt.\n\n`);
+            appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
             break;
           }
@@ -559,12 +681,12 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
             awaitingResponseFor = null; // Valid selection, so we're done with the prompt.
             const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
             typewriterEffect(fullText, () => {
-              appendTextToTerminal("\n\n");
-              input.disabled = false;
+              appendTextToTerminal("\n");
+              input.contentEditable = 'true';
               input.focus();
             });
           } else {
-            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n\n`);
+            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n`);
             // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
@@ -580,7 +702,9 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
     let historyIndex = 0;
 
     input.addEventListener('keydown', function(event) {
-      const currentInput = input.value.trim();
+      // Use innerText for contenteditable div
+      const rawInput = input.innerText;
+      const currentInput = rawInput.trim();
       const currentInputLower = currentInput.toLowerCase();
 
       // Handle up/down arrow for command history
@@ -588,20 +712,20 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         event.preventDefault();
         if (historyIndex > 0) {
           historyIndex--;
-          input.value = commandHistory[historyIndex].text;
+          input.innerText = commandHistory[historyIndex].text;
           // Move cursor to the end of the input for a better user experience
-          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          setTimeout(() => moveCursorToEnd(input), 0);
         }
       } else if (event.key === 'ArrowDown') {
         event.preventDefault();
         if (historyIndex < commandHistory.length - 1) {
           historyIndex++;
-          input.value = commandHistory[historyIndex].text;
-          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          input.innerText = commandHistory[historyIndex].text;
+          setTimeout(() => moveCursorToEnd(input), 0);
         } else {
           // If we are at the end of history, going down again clears the input for a new command
           historyIndex = commandHistory.length;
-          input.value = '';
+          input.innerText = '';
         }
       }
       // Handle Tab for command completion
@@ -613,7 +737,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         const matches = allPossibleCommands.filter(c => c.startsWith(currentInputLower));
 
         if (matches.length === 1) {
-          input.value = matches[0];
+          input.innerText = matches[0];
+          setTimeout(() => moveCursorToEnd(input), 0);
         } else if (matches.length > 1) {
           // Find the longest common prefix among all matches
           let sortedMatches = [...matches].sort();
@@ -625,17 +750,29 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           }
           const commonPrefix = first.substring(0, i);
           if (commonPrefix.length > currentInput.length) {
-            input.value = commonPrefix;
+            input.innerText = commonPrefix;
+            setTimeout(() => moveCursorToEnd(input), 0);
           }
         }
       }
       // Handle Enter to submit command
       else if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent adding a new line in the contenteditable div
+        // On the first command, re-enable scrolling for the content area.
+        contentWrapper.classList.remove('no-scroll-on-launch');
+
         if (currentInput === '') return;
 
         appendTextToTerminal(`\n> ${currentInput}`); // Display original casing
 
-        if (awaitingResponseFor) {
+        const resolvedForCancel = commandAliases[currentInputLower] || currentInputLower;
+
+        // --- Special 'cancel' command to interrupt processes ---
+        if (resolvedForCancel === 'cancel') {
+          if (!cancelCurrentProcess()) { // The typed command doesn't show ^C
+            appendTextToTerminal(`\nNo active process to cancel.\n`);
+          }
+        } else if (awaitingResponseFor) {
           appendTextToTerminal(`\n`);
           handleResponse(currentInputLower);
         } else {
@@ -645,30 +782,60 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           handleCommand(currentInputLower);
         }
 
-        input.value = '';
-        window.scrollTo(0, document.body.scrollHeight);
+        input.innerText = '';
+        contentWrapper.scrollTop = contentWrapper.scrollHeight;
       }
     });
 
     printWelcomeMessage();
+    // Initially disable scrolling in the content area for a clean launch.
+    contentWrapper.classList.add('no-scroll-on-launch');
 
     const commands = {
       help: () => {
-        let helpText = 'AVAILABLE COMMANDS:\n';
-        Object.entries(commandDescriptions).forEach(([command, description]) => {
-          const aliases = Object.keys(commandAliases).filter(alias => commandAliases[alias] === command);
-          helpText += `- ${command}${aliases.length > 0 ? ` (or: ${aliases.join(', ')})` : ''} : ${description}\n`;
-        });
+        const isMobile = window.innerWidth <= 768; // Match the CSS breakpoint
+
+        const commandToAliases = Object.entries(commandAliases).reduce((acc, [alias, command]) => {
+          (acc[command] = acc[command] || []).push(alias);
+          return acc;
+        }, {});
+
+        let helpText = 'AVAILABLE COMMANDS:\n\n';
+
+        if (isMobile) {
+          // Mobile-friendly stacked view for better readability
+          const labelWidth = 10;
+          Object.entries(commandDescriptions).forEach(([command, description]) => {
+            const aliases = (commandToAliases[command] || []).join(', ');
+            helpText += `${'COMMAND:'.padEnd(labelWidth)}${command}\n`;
+            if (aliases) {
+              helpText += `${'ALIASES:'.padEnd(labelWidth)}${aliases}\n`;
+            }
+            helpText += `${'DESC:'.padEnd(labelWidth)}${description}\n\n`;
+          });
+        } else {
+          // Desktop table view
+          const commandColWidth = 12;
+          const aliasesColWidth = 15;
+
+          helpText += 'COMMAND'.padEnd(commandColWidth) + 'ALIASES'.padEnd(aliasesColWidth) + 'DESCRIPTION\n';
+          helpText += '-------'.padEnd(commandColWidth) + '-------'.padEnd(aliasesColWidth) + '-----------\n';
+
+          Object.entries(commandDescriptions).forEach(([command, description]) => {
+            const aliases = (commandToAliases[command] || []).join(', ');
+            helpText += `${command.padEnd(commandColWidth)}${aliases.padEnd(aliasesColWidth)}${description}\n`;
+          });
+        }
         return helpText.trim();
       },
       bio: () => {
-        const bioText = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
-        typewriterEffect(bioText, () => {
+        typewriterEffect(bioTextPart1, () => {
           // This function runs after the typing is complete
-          appendTextToTerminal("\n\n"); // Add spacing after the bio
-          input.disabled = false; // Re-enable the input field
+          appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
+          awaitingResponseFor = 'bio_continue';
+          input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         });
         return null; // Signal that output is handled asynchronously
       },
@@ -676,10 +843,10 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
         const contactText = "Cell: 732-573-8567\nEmail: mattiglody@gmail.com";
         typewriterEffect(contactText, () => {
           // This function runs after the typing is complete
-          appendTextToTerminal("\n\n"); // Add spacing after the contact info
-          input.disabled = false; // Re-enable the input field
+          appendTextToTerminal("\n"); // Add spacing after the contact info
+          input.contentEditable = 'true'; // Re-enable the input field
           input.focus(); // Focus on the input field for the next command
-          window.scrollTo(0, document.body.scrollHeight);
+          contentWrapper.scrollTop = contentWrapper.scrollHeight;
         });
         return null; // Signal that output is handled asynchronously
       },
@@ -689,6 +856,11 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
           .map(([key, value]) => `${key}. ${value.title}`)
           .join('\n');
         return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
+      },
+      linkedin: () => {
+        const url = 'https://www.linkedin.com/in/matthew-iglody/';
+        window.open(url, '_blank');
+        return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
       },
       hangman: () => {
         startHangmanGame();
@@ -732,7 +904,7 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
 
       const commandFn = commands[resolvedCmd];
       if (!commandFn) {
-        appendTextToTerminal(`Unrecognized command: '${cmd}'\nType 'help' (or 'h') for options.\n\n`);
+        appendTextToTerminal(`Unrecognized command: '${cmd}'\nType 'help' (or 'h') for options.\n`);
         return;
       }
 
@@ -741,9 +913,8 @@ USER PRIVILEGES: READ/VIEW/NAVIGATE
       // If a command returns null, it handles its own output (e.g., typewriter)
       if (output === null) return;
 
-      // The 'help' command's output is multi-line, so it only needs one trailing newline for spacing.
-      const trailingNewlines = (['help', 'exit', 'workhistory', 'hack'].includes(resolvedCmd)) ? "\n" : "\n\n";
-      appendTextToTerminal(output + trailingNewlines);
+      // Add a single newline for consistent spacing before the next prompt.
+      appendTextToTerminal(output + "\n");
     }
   </script>
 </body>
