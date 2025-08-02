@@ -617,7 +617,7 @@
 
       const stageArt = hangmanGameData.stages[hangmanGameState.mistakes];
       const guessedDisplay = `Guessed: ${hangmanGameState.guessedLetters.join(', ')}`;
-      
+
       const output = `\n${stageArt}\n\n${wordDisplay}\n\n${guessedDisplay}\n\nEnter a letter:`;
       appendTextToTerminal(output);
     }
