@@ -170,19 +170,24 @@
 
   #gui-window {
     position: absolute;
-    background-color: black;
-    border: 2px solid #00FF00;
+    /* Default centered position for desktop */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #00FF00; /* Use background to create the border color */
+    border: none;
     box-shadow: 0 0 10px #00FF00;
     width: 85%;
     max-width: 420px;
     font-family: 'Courier New', Courier, monospace;
-    color: #00FF00;
+    padding: 1px; /* This padding creates a very thin border */
+    cursor: move;
   }
 
   #gui-title-bar {
     background-color: #00FF00;
     color: black;
-    padding: 5px 10px;
+    padding: 1px 8px;
     font-weight: bold;
     display: flex;
     justify-content: space-between;
@@ -201,16 +206,31 @@
   }
 
   #gui-content {
-    padding: 15px 20px;
+    background-color: black; /* Content area has a black background */
+    color: #00FF00; /* Text inside is green */
+    padding: 3px 15px;
+    cursor: default;
   }
-  #gui-content p { margin-top: 0; margin-bottom: 15px; }
+  #gui-content p { margin-top: 0; margin-bottom: 5px; }
   #gui-content ul { list-style: none; padding: 0; margin: 0; }
-  #gui-content li { margin-bottom: 5px; }
-  #gui-content a { color: #00FF00; text-decoration: none; }
+  #gui-content li { margin-bottom: 1px; }
+  #gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
   #gui-content a:hover { background-color: #00FF00; color: black; }
 
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
+    #gui-window {
+      width: 90vw;
+      max-width: none;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    #gui-title-bar {
+      cursor: default; /* Dragging is disabled on mobile */
+    }
+
     .terminal-container {
       padding: 0 1em; /* Reduce horizontal padding for more content space */
     }
@@ -498,9 +518,11 @@
     function showGui() {
       // Reset window position to center before showing
       const guiWindow = document.getElementById('gui-window');
-      guiWindow.style.top = '50%';
-      guiWindow.style.left = '50%';
-      guiWindow.style.transform = 'translate(-50%, -50%)';
+      // By clearing inline styles, the window reverts to its CSS-defined
+      // position, which respects the media query for mobile/desktop.
+      guiWindow.style.top = '';
+      guiWindow.style.left = '';
+      guiWindow.style.transform = '';
 
       guiContainer.classList.remove('gui-hidden');
       guiContainer.classList.add('gui-visible');
@@ -801,6 +823,16 @@
       let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
       const dragMouseDown = (e) => {
+        // On mobile, we disable dragging via touch for a better UX.
+        if (window.innerWidth <= 768 && e.type === 'touchstart') {
+          return;
+        }
+
+    // Prevent dragging when clicking on interactive elements inside the window
+    if (e.target.closest('#gui-content') || e.target.closest('#gui-close-button')) {
+      return;
+    }
+
         // If the element is centered with transform, convert to absolute pixel positioning for dragging
         if (element.style.transform) {
           const rect = element.getBoundingClientRect();
@@ -1033,7 +1065,7 @@
     guiContent.addEventListener('click', handleMenuClick);
     guiContent.addEventListener('touchend', handleMenuClick);
 
-    makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-title-bar'));
+    makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-window'));
 
     printWelcomeMessage();
     // Initially disable scrolling in the content area for a clean launch.
