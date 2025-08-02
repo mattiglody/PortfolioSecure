@@ -4,7 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Secure Server</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico"> 
+  <!--
+    A more robust favicon setup for maximum compatibility.
+    The browser will pick the best one for its context (tab, bookmarks, etc.).
+  -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"> <!-- Modern, high-quality SVG -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"> <!-- iOS home screen icon (180x180) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="shortcut icon" href="favicon.ico"> <!-- Fallback for older browsers -->
+  <meta name="theme-color" content="#000000">
   <style>
     html {
       height: 100%;
@@ -252,6 +261,21 @@
     scrollbar-width: none;  /* Firefox */
   }
   .gui-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+
+  /* Specific styles for the picture viewer content area */
+  #pic-content {
+    display: flex;
+    flex-direction: column;
+    padding: 15px; /* Add vertical padding and override horizontal from .gui-content */
+  }
+
+  #pic-content img {
+    flex-grow: 1; /* Allow the image to fill the available space */
+    object-fit: contain; /* Scale the image to fit, preserving aspect ratio */
+    /* These are important for flexbox to correctly size/shrink the image */
+    min-height: 0;
+    width: 100%; /* Ensure it takes up the container's width */
+  }
   .gui-content p { margin: 0; line-height: 1.1; } /* Apply a tight line-height directly to the paragraph */
   .gui-content ul { list-style: none; padding: 0; margin: 0; }
   .gui-content li { margin-bottom: 0; line-height: 1.1; } /* Apply a tight line-height directly to list items */
@@ -331,6 +355,7 @@
       </div>
       <div id="pic-content" class="gui-content">
         <p>This is a placeholder for an image or other content.</p>
+        <img src="pics/Matt_Caricature.png" alt="Cartoon Matt">
         <p>In the future, this could display an actual image, maybe even a gallery.</p>
       </div>
       <div id="pic-resize-handle" class="gui-resize-handle"></div>
@@ -386,9 +411,9 @@
       }
     });
 
-    // Global keydown listener for cancellation (Ctrl+C)
-    // This needs to be global to catch the event even when the input field is disabled (e.g., during typewriter effect).
+    // Global keydown listener for system-wide shortcuts
     document.addEventListener('keydown', function(event) {
+      // Handle Ctrl+C for process cancellation
       if (event.ctrlKey && event.key.toLowerCase() === 'c') {
         // We only want to act if a process is running to avoid interfering with browser's native copy function.
         if (awaitingResponseFor || activeTypingInterval) {
@@ -399,6 +424,19 @@
           appendTextToTerminal('^C');
           
           cancelCurrentProcess();
+        }
+      }
+      // Handle Escape key to close GUI windows
+      else if (event.key === 'Escape' || event.key === 'Esc') {
+        // Check if the main GUI menu is visible and close it
+        if (guiContainer.classList.contains('gui-visible')) {
+          event.preventDefault(); // Prevent any default browser action
+          hideGui();
+        }
+        // Check if the picture viewer is visible and close it
+        else if (picContainer.classList.contains('gui-visible')) {
+          event.preventDefault(); // Prevent any default browser action
+          hidePicWindow();
         }
       }
     });
