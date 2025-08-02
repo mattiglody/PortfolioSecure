@@ -168,6 +168,24 @@
     animation: none; /* Don't flicker the GUI overlay */
   }
 
+  /* --- Fade Out Styles --- */
+  .fade-hidden {
+    display: none;
+  }
+
+  #fade-to-black {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    z-index: 9999; /* On top of everything */
+    opacity: 0;
+    transition: opacity 1.5s ease-in;
+    pointer-events: none;
+  }
+
   #gui-window {
     position: absolute;
     /* Default centered position for desktop */
@@ -179,20 +197,35 @@
     box-shadow: 0 0 10px #00FF00;
     width: 85%;
     max-width: 420px;
+    min-width: 250px;
+    min-height: 150px;
     font-family: 'Courier New', Courier, monospace;
     padding: 1px; /* This padding creates a very thin border */
     cursor: move;
+    display: flex;
+    flex-direction: column;
   }
 
   #gui-title-bar {
     background-color: #00FF00;
     color: black;
-    padding: 1px 8px;
+    padding: 0 8px;
     font-weight: bold;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    line-height: 1; /* Set line height to minimum for compactness */
     cursor: move;
+  }
+
+  #gui-resize-handle {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    bottom: 0;
+    right: 0;
+    cursor: se-resize;
+    z-index: 10; /* On top of the draggable area */
   }
 
   #gui-close-button {
@@ -200,20 +233,28 @@
     border: none;
     color: black;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 14px; /* Make the button slightly smaller to reduce title bar height */
     font-weight: bold;
     cursor: pointer;
+    padding: 0; /* Remove default button padding */
+    line-height: 1; /* Ensure the button itself is compact */
   }
 
   #gui-content {
     background-color: black; /* Content area has a black background */
     color: #00FF00; /* Text inside is green */
-    padding: 3px 15px;
+    padding: 0 15px;
+    flex-grow: 1; /* Allows content to fill available space when resizing */
+    overflow: auto; /* Add scrollbar if content overflows */
     cursor: default;
+    /* Hide scrollbar for different browsers */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
-  #gui-content p { margin-top: 0; margin-bottom: 5px; }
+  #gui-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+  #gui-content p { margin: 0; line-height: 1.1; } /* Apply a tight line-height directly to the paragraph */
   #gui-content ul { list-style: none; padding: 0; margin: 0; }
-  #gui-content li { margin-bottom: 1px; }
+  #gui-content li { margin-bottom: 0; line-height: 1.1; } /* Apply a tight line-height directly to list items */
   #gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
   #gui-content a:hover { background-color: #00FF00; color: black; }
 
@@ -278,8 +319,11 @@
           <li><a href="#" data-command="lockpick">6. Simulate Lockpicking</a></li>
         </ul>
       </div>
+      <div id="gui-resize-handle"></div>
     </div>
   </div>
+
+  <div id="fade-to-black" class="fade-hidden"></div>
 
   <script>
     const terminal = document.getElementById('terminal');
@@ -312,6 +356,7 @@
     const guiContainer = document.getElementById('gui-container');
     const guiCloseButton = document.getElementById('gui-close-button');
     const guiContent = document.getElementById('gui-content');
+    const fadeOverlay = document.getElementById('fade-to-black');
     let activeTypingInterval = null; // To manage the typewriter effect
     let awaitingResponseFor = null; // State for multi-step commands
     const commandHistory = [];
@@ -357,6 +402,7 @@
       'hm': 'hangman',
       'lp': 'lockpick',
       'cv': 'transfer',
+      'joke': 'lol',
       'resume': 'transfer',
       'history': 'logs',
       'l': 'logs',
@@ -384,6 +430,14 @@
       "[LOG 15 - 07/27/2077 20:01:59] Motion detected in corridor 7-B. No personnel scheduled. Drone dispatched."
     ];
 
+    const jokes = [
+      "Why don't programmers like nature? It has too many bugs.",
+      "What's the object-oriented way to get wealthy? Inheritance.",
+      "Why did the web developer go broke? Because he used up all his cache.",
+      "I told my wife she was drawing her eyebrows too high. She looked surprised.",
+      "Why don't scientists trust atoms? Because they make up everything!"
+    ];
+
     const commandDescriptions = {
       'help': 'List available commands',
       'bio': 'Display my professional bio',
@@ -394,6 +448,7 @@
       'hack': 'Initiate a security breach simulation',
       'hangman': 'Play a classic game of hangman',
       'lockpick': 'Simulate a simple lockpicking minigame',
+      'lol': 'Tell a random joke',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
@@ -819,8 +874,8 @@
       let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
       const dragMouseDown = (e) => {
-    // Prevent dragging when clicking on interactive elements inside the window
-    if (e.target.closest('#gui-content') || e.target.closest('#gui-close-button')) {
+    // Prevent dragging when clicking on interactive elements (content, close button, resize handle)
+    if (e.target.closest('#gui-content') || e.target.closest('#gui-close-button') || e.target.id === 'gui-resize-handle') {
       return;
     }
 
@@ -870,31 +925,72 @@
       handle.addEventListener('touchstart', dragMouseDown);
     }
 
+    function makeResizable(element, handle) {
+      let initialX, initialY, initialWidth, initialHeight;
+
+      const resizeMouseDown = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent triggering the drag behavior on the parent
+
+        initialWidth = element.offsetWidth;
+        initialHeight = element.offsetHeight;
+
+        if (e.type === 'touchstart') {
+          initialX = e.touches[0].clientX;
+          initialY = e.touches[0].clientY;
+        } else {
+          initialX = e.clientX;
+          initialY = e.clientY;
+        }
+
+        document.addEventListener('mousemove', elementResize);
+        document.addEventListener('touchmove', elementResize, { passive: false });
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchend', stopResize);
+      };
+
+      const elementResize = (e) => {
+        if (e.type === 'touchmove') e.preventDefault();
+        
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+        element.style.width = (initialWidth + (clientX - initialX)) + 'px';
+        element.style.height = (initialHeight + (clientY - initialY)) + 'px';
+      };
+
+      const stopResize = () => {
+        document.removeEventListener('mousemove', elementResize);
+        document.removeEventListener('touchmove', elementResize);
+        document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchend', stopResize);
+      };
+
+      handle.addEventListener('mousedown', resizeMouseDown);
+      handle.addEventListener('touchstart', resizeMouseDown);
+    }
+
     function handleResponse(response) {
       switch (awaitingResponseFor) {
-        case 'exit_confirm':
-          if (response === 'y' || response === 'yes') {
-            appendTextToTerminal(`\nWould you like a transcript of your activity? (y/n)`);
-            awaitingResponseFor = 'transcript_prompt';
-          } else {
-            appendTextToTerminal(`\nExit cancelled.\n`);
-            awaitingResponseFor = null;
-          }
-          break;
         case 'transcript_prompt':
           if (response === 'y' || response === 'yes') {
             downloadTranscript();
           }
-          // Instead of exiting, ask for final confirmation.
+          // After handling the transcript, ask for final confirmation to exit.
           appendTextToTerminal(`\n\nAre you sure you want to terminate the session? (y/n)`);
           awaitingResponseFor = 'final_exit_confirm';
           break;
         case 'final_exit_confirm':
           if (response === 'y' || response === 'yes') {
-            appendTextToTerminal(`\n\nSESSION TERMINATED.\nGOODBYE.`);
-            input.contentEditable = 'false';
-            setTimeout(() => window.close(), 2000);
             awaitingResponseFor = null;
+            const exitMessage = `\n\nSESSION TERMINATED.\nGOODBYE.`;
+            typewriterEffect(exitMessage, () => {
+              // Instead of trying to close the window (which browsers block),
+              // we visually end the session by fading to black.
+              fadeOverlay.style.display = 'block';
+              // A short delay ensures the 'display' change is rendered before the opacity transition starts.
+              setTimeout(() => { fadeOverlay.style.opacity = '1'; }, 50);
+            });
           } else {
             appendTextToTerminal(`\nExit cancelled.\n`);
             awaitingResponseFor = null;
@@ -1057,6 +1153,7 @@
     guiContent.addEventListener('touchend', handleMenuClick);
 
     makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-window'));
+    makeResizable(document.getElementById('gui-window'), document.getElementById('gui-resize-handle'));
 
     printWelcomeMessage();
     // Initially disable scrolling in the content area for a clean launch.
@@ -1133,6 +1230,10 @@
         window.open(url, '_blank');
         return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
       },
+      lol: () => {
+        const randomIndex = Math.floor(Math.random() * jokes.length);
+        return jokes[randomIndex];
+      },
       hangman: () => {
         startHangmanGame();
         return null; // Signal that output is handled asynchronously
@@ -1166,8 +1267,8 @@
         }).join("\n");
       },
       exit: () => {
-        awaitingResponseFor = 'exit_confirm';
-        return "Are you sure you want to exit? (y/n)";
+        awaitingResponseFor = 'transcript_prompt';
+        return "Would you like a transcript of your activity? (y/n)";
       },
     };
 
