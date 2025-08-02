@@ -260,6 +260,7 @@
           <li><a href="#" data-command="workhistory">3. View Work History</a></li>
           <li><a href="#" data-command="hack">4. Play Security Breach Minigame</a></li>
           <li><a href="#" data-command="hangman">5. Play Hangman</a></li>
+          <li><a href="#" data-command="lockpick">6. Simulate Lockpicking</a></li>
         </ul>
       </div>
     </div>
@@ -339,6 +340,7 @@
       'game': 'hack',
       'play': 'hack',
       'hm': 'hangman',
+      'lp': 'lockpick',
       'cv': 'transfer',
       'resume': 'transfer',
       'history': 'logs',
@@ -376,6 +378,7 @@
       'menu': 'Display a list of portfolio items',
       'hack': 'Initiate a security breach simulation',
       'hangman': 'Play a classic game of hangman',
+      'lockpick': 'Simulate a simple lockpicking minigame',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
@@ -482,6 +485,7 @@
     };
 
     let hangmanGameState = {};
+    let lockpickGameState = {};
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML;
@@ -668,6 +672,73 @@
       });
     }
 
+    function startLockpickGame() {
+      awaitingResponseFor = 'lockpick_game';
+      const target = Math.floor(Math.random() * 100) + 1;
+      lockpickGameState = {
+        targetPosition: target,
+        attemptsLeft: 5
+      };
+
+      const gameScreen = `...INITIATING LOCKPICK SIMULATION...\nYou find a rusted footlocker. You have ${lockpickGameState.attemptsLeft} bobby pins.\nFind the sweet spot by entering a position [1-100].`;
+      typewriterEffect(gameScreen, () => {
+        appendTextToTerminal(`\nEnter position:`);
+        input.contentEditable = 'true';
+        input.focus();
+      });
+    }
+
+    function handleLockpickAttempt(attempt) {
+      const position = parseInt(attempt, 10);
+
+      if (isNaN(position) || position < 1 || position > 100) {
+        appendTextToTerminal(`\n> Invalid input. Please enter a number between 1 and 100.\n`);
+        return;
+      }
+
+      if (position === lockpickGameState.targetPosition) {
+        endLockpickGame(true);
+        return;
+      }
+
+      lockpickGameState.attemptsLeft--;
+
+      if (lockpickGameState.attemptsLeft <= 0) {
+        appendTextToTerminal(`\n> *SNAP!* Your bobby pin breaks.`);
+        endLockpickGame(false);
+        return;
+      }
+
+      let feedback = "\n> ";
+      feedback += (position > lockpickGameState.targetPosition) 
+        ? "The pin meets heavy resistance. You've pushed it too far.\n> "
+        : "The pin feels loose. Not enough pressure.\n> ";
+
+      const diff = Math.abs(lockpickGameState.targetPosition - position);
+      if (diff <= 5) {
+        feedback += "You feel a slight give... you're very close.";
+      } else if (diff <= 15) {
+        feedback += "You hear a faint metallic scrape. Getting warmer.";
+      } else {
+        feedback += "Nothing but solid tension. You're way off.";
+      }
+
+      appendTextToTerminal(`${feedback}\n> You have ${lockpickGameState.attemptsLeft} bobby pins left.\n\nEnter position:`);
+    }
+
+    function endLockpickGame(won) {
+      awaitingResponseFor = null;
+      const message = won 
+        ? "\n...*CLICK*...\nThe lock springs open. You find a dusty old comic book." 
+        : `\n...FAILURE...\nThe lock remains sealed.`;
+        
+      typewriterEffect(message, () => {
+        appendTextToTerminal("\n");
+        input.contentEditable = 'true';
+        input.focus();
+      });
+    }
+
     function startHackGame() {
       awaitingResponseFor = 'hack_game';
       const password = hackGameData.words[Math.floor(Math.random() * hackGameData.words.length)];
@@ -789,6 +860,9 @@
           break;
         case 'hack_game':
           handleHackGuess(response);
+          break;
+        case 'lockpick_game':
+          handleLockpickAttempt(response);
           break;
       }
     }
@@ -981,6 +1055,10 @@
       },
       hangman: () => {
         startHangmanGame();
+        return null; // Signal that output is handled asynchronously
+      },
+      lockpick: () => {
+        startLockpickGame();
         return null; // Signal that output is handled asynchronously
       },
       hack: () => {
