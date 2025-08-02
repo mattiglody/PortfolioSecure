@@ -152,6 +152,64 @@
     pointer-events: none;
   }
 
+  /* --- GUI Styles --- */
+  .gui-hidden {
+    display: none;
+  }
+
+  .gui-visible {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75); /* Dim the background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: none; /* Don't flicker the GUI overlay */
+  }
+
+  #gui-window {
+    background-color: black;
+    border: 2px solid #00FF00;
+    box-shadow: 0 0 10px #00FF00;
+    width: 90%;
+    max-width: 500px;
+    font-family: 'Courier New', Courier, monospace;
+    color: #00FF00;
+  }
+
+  #gui-title-bar {
+    background-color: #00FF00;
+    color: black;
+    padding: 5px 10px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: default;
+  }
+
+  #gui-close-button {
+    background: none;
+    border: none;
+    color: black;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #gui-content {
+    padding: 20px;
+  }
+  #gui-content ul { list-style: none; padding: 0; }
+  #gui-content li { margin-bottom: 10px; }
+  #gui-content a { color: #00FF00; text-decoration: none; }
+  #gui-content a:hover { background-color: #00FF00; color: black; }
+
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
     .terminal-container {
@@ -187,12 +245,30 @@
      <!-- &copy; 2025 Matthew Emil Iglody-->
     </footer>
   </div>
+
+  <div id="gui-container" class="gui-hidden">
+    <div id="gui-window">
+      <div id="gui-title-bar">
+        <span>SYSTEM MENU</span>
+        <button id="gui-close-button">X</button>
+      </div>
+      <div id="gui-content">
+        <p>Select an option to execute the command:</p>
+        <ul>
+          <li><a href="#" data-command="bio">1. View Bio</a></li>
+          <li><a href="#" data-command="contact">2. View Contact Info</a></li>
+          <li><a href="#" data-command="workhistory">3. View Work History</a></li>
+          <li><a href="#" data-command="hack">4. Play Security Breach Minigame</a></li>
+          <li><a href="#" data-command="hangman">5. Play Hangman</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <script>
     const terminal = document.getElementById('terminal');
     const input = document.getElementById('terminal-input');
     const contentWrapper = document.querySelector('.content-wrapper');
-
-    let activeTypingInterval = null; // To manage the typewriter effect
 
     const initialWelcomeHTML = `<div class="centered-line">SECURE SERVER LINK (TM)<br>MATTHEW IGLODY</div>
 <div class="centered-line">-----ONE TIME PASSWORD ACCEPTED-----</div>
@@ -215,6 +291,14 @@
 
 > TYPE "help" FOR AVAILABLE COMMANDS (not case sensitive)
 `;
+
+    // --- Global State & Element Refs ---
+    const guiContainer = document.getElementById('gui-container');
+    const guiCloseButton = document.getElementById('gui-close-button');
+    const guiContent = document.getElementById('gui-content');
+    let activeTypingInterval = null; // To manage the typewriter effect
+    let awaitingResponseFor = null; // State for multi-step commands
+    const commandHistory = [];
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     document.body.addEventListener('click', (event) => {
@@ -241,10 +325,6 @@
         }
       }
     });
-
-    let awaitingResponseFor = null; // State for multi-step commands
-
-    const commandHistory = [];
 
     const commandAliases = {
       'h': 'help',
@@ -285,14 +365,6 @@
       "[LOG 13 - 07/27/2077 13:14:45] Cafeteria nutrient dispenser malfunction. Manual override successful.",
       "[LOG 14 - 07/27/2077 15:48:02] Resident anxiety levels elevated. Increasing recreational programs.",
       "[LOG 15 - 07/27/2077 20:01:59] Motion detected in corridor 7-B. No personnel scheduled. Drone dispatched."
-    ];
-
-    const menuItems = [
-      "1. Bio - [TYPE 'bio' to view]",
-      "2. Contact - [TYPE 'contact' to view]",
-      "3. Work History - [TYPE 'workhistory' to view]",
-      "4. Security Breach Minigame - [TYPE 'hack' to play]",
-      "5. Hangman - [TYPE 'hangman' to play]"
     ];
 
     const commandDescriptions = {
@@ -418,6 +490,28 @@
     function appendTextToTerminal(text) {
       // Appending a text node is safer than innerHTML and respects the `white-space: pre-wrap` style.
       terminal.appendChild(document.createTextNode(text));
+    }
+
+    function showGui() {
+      guiContainer.classList.remove('gui-hidden');
+      guiContainer.classList.add('gui-visible');
+      input.contentEditable = 'false'; // Disable terminal input while GUI is open
+    }
+
+    function hideGui() {
+      guiContainer.classList.add('gui-hidden');
+      guiContainer.classList.remove('gui-visible');
+      input.contentEditable = 'true'; // Re-enable terminal input
+      input.focus();
+    }
+
+    function simulateCommand(command) {
+      hideGui();
+      appendTextToTerminal(`\n> ${command}\n`);
+      commandHistory.push({ text: command, timestamp: new Date() });
+      historyIndex = commandHistory.length;
+      handleCommand(command);
+      contentWrapper.scrollTop = contentWrapper.scrollHeight;
     }
 
     function typewriterEffect(text, onComplete) {
@@ -787,6 +881,29 @@
       }
     });
 
+    // --- GUI Event Listeners ---
+    // We add listeners for both 'click' and 'touchend' to ensure the GUI is
+    // responsive on touch devices while maintaining compatibility with mouse input.
+    // Calling preventDefault() in the handler for 'touchend' stops the browser
+    // from firing a redundant 'click' event after a tap.
+    const handleCloseClick = (event) => {
+      event.preventDefault();
+      hideGui();
+    };
+    guiCloseButton.addEventListener('click', handleCloseClick);
+    guiCloseButton.addEventListener('touchend', handleCloseClick);
+
+    const handleMenuClick = (event) => {
+      const target = event.target.closest('a');
+      if (target && target.dataset.command) {
+        event.preventDefault();
+        const command = target.dataset.command;
+        simulateCommand(command);
+      }
+    };
+    guiContent.addEventListener('click', handleMenuClick);
+    guiContent.addEventListener('touchend', handleMenuClick);
+
     printWelcomeMessage();
     // Initially disable scrolling in the content area for a clean launch.
     contentWrapper.classList.add('no-scroll-on-launch');
@@ -870,7 +987,10 @@
         startHackGame();
         return null; // Signal that output is handled asynchronously
       },
-      menu: () => menuItems.join("\n"),
+      menu: () => {
+        showGui();
+        return null; // GUI handles its own display, no text output needed
+      },
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
         // Open the file in a new tab. The browser's built-in PDF viewer will handle it.
