@@ -164,14 +164,12 @@
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.75); /* Dim the background */
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 100;
     animation: none; /* Don't flicker the GUI overlay */
   }
 
   #gui-window {
+    position: absolute;
     background-color: black;
     border: 2px solid #00FF00;
     box-shadow: 0 0 10px #00FF00;
@@ -189,7 +187,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: default;
+    cursor: move;
   }
 
   #gui-close-button {
@@ -206,7 +204,7 @@
     padding: 20px;
   }
   #gui-content ul { list-style: none; padding: 0; }
-  #gui-content li { margin-bottom: 10px; }
+  #gui-content li { margin-bottom: 8px; }
   #gui-content a { color: #00FF00; text-decoration: none; }
   #gui-content a:hover { background-color: #00FF00; color: black; }
 
@@ -497,6 +495,12 @@
     }
 
     function showGui() {
+      // Reset window position to center before showing
+      const guiWindow = document.getElementById('gui-window');
+      guiWindow.style.top = '50%';
+      guiWindow.style.left = '50%';
+      guiWindow.style.transform = 'translate(-50%, -50%)';
+
       guiContainer.classList.remove('gui-hidden');
       guiContainer.classList.add('gui-visible');
       input.contentEditable = 'false'; // Disable terminal input while GUI is open
@@ -792,6 +796,56 @@
       });
     }
 
+    function makeDraggable(element, handle) {
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+      const dragMouseDown = (e) => {
+        // If the element is centered with transform, convert to absolute pixel positioning for dragging
+        if (element.style.transform) {
+          const rect = element.getBoundingClientRect();
+          element.style.transform = 'none';
+          element.style.left = `${rect.left}px`;
+          element.style.top = `${rect.top}px`;
+        }
+
+        e.preventDefault();
+        // Get the initial cursor position
+        if (e.type === 'touchstart') {
+          pos3 = e.touches[0].clientX;
+          pos4 = e.touches[0].clientY;
+        } else {
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+        }
+        document.addEventListener('mouseup', closeDragElement);
+        document.addEventListener('touchend', closeDragElement);
+        document.addEventListener('mousemove', elementDrag);
+        document.addEventListener('touchmove', elementDrag);
+      };
+
+      const elementDrag = (e) => {
+        e.preventDefault();
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        pos1 = pos3 - clientX;
+        pos2 = pos4 - clientY;
+        pos3 = clientX;
+        pos4 = clientY;
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+      };
+
+      const closeDragElement = () => {
+        document.removeEventListener('mouseup', closeDragElement);
+        document.removeEventListener('touchend', closeDragElement);
+        document.removeEventListener('mousemove', elementDrag);
+        document.removeEventListener('touchmove', elementDrag);
+      };
+
+      handle.addEventListener('mousedown', dragMouseDown);
+      handle.addEventListener('touchstart', dragMouseDown);
+    }
+
     function handleResponse(response) {
       switch (awaitingResponseFor) {
         case 'exit_confirm':
@@ -977,6 +1031,8 @@
     };
     guiContent.addEventListener('click', handleMenuClick);
     guiContent.addEventListener('touchend', handleMenuClick);
+
+    makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-title-bar'));
 
     printWelcomeMessage();
     // Initially disable scrolling in the content area for a clean launch.
