@@ -227,10 +227,6 @@
       transform: translateX(-50%);
     }
 
-    #gui-title-bar {
-      cursor: default; /* Dragging is disabled on mobile */
-    }
-
     .terminal-container {
       padding: 0 1em; /* Reduce horizontal padding for more content space */
     }
@@ -823,11 +819,6 @@
       let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
       const dragMouseDown = (e) => {
-        // On mobile, we disable dragging via touch for a better UX.
-        if (window.innerWidth <= 768 && e.type === 'touchstart') {
-          return;
-        }
-
     // Prevent dragging when clicking on interactive elements inside the window
     if (e.target.closest('#gui-content') || e.target.closest('#gui-close-button')) {
       return;
