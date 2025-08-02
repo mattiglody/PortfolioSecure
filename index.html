@@ -186,7 +186,7 @@
     pointer-events: none;
   }
 
-  #gui-window {
+  .gui-window {
     position: absolute;
     /* Default centered position for desktop */
     top: 50%;
@@ -206,7 +206,7 @@
     flex-direction: column;
   }
 
-  #gui-title-bar {
+  .gui-title-bar {
     background-color: #00FF00;
     color: black;
     padding: 0 8px;
@@ -218,7 +218,7 @@
     cursor: move;
   }
 
-  #gui-resize-handle {
+  .gui-resize-handle {
     position: absolute;
     width: 15px;
     height: 15px;
@@ -228,7 +228,7 @@
     z-index: 10; /* On top of the draggable area */
   }
 
-  #gui-close-button {
+  .gui-close-button {
     background: none;
     border: none;
     color: black;
@@ -240,7 +240,7 @@
     line-height: 1; /* Ensure the button itself is compact */
   }
 
-  #gui-content {
+  .gui-content {
     background-color: black; /* Content area has a black background */
     color: #00FF00; /* Text inside is green */
     padding: 0 15px;
@@ -251,16 +251,16 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
-  #gui-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
-  #gui-content p { margin: 0; line-height: 1.1; } /* Apply a tight line-height directly to the paragraph */
-  #gui-content ul { list-style: none; padding: 0; margin: 0; }
-  #gui-content li { margin-bottom: 0; line-height: 1.1; } /* Apply a tight line-height directly to list items */
-  #gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
-  #gui-content a:hover { background-color: #00FF00; color: black; }
+  .gui-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+  .gui-content p { margin: 0; line-height: 1.1; } /* Apply a tight line-height directly to the paragraph */
+  .gui-content ul { list-style: none; padding: 0; margin: 0; }
+  .gui-content li { margin-bottom: 0; line-height: 1.1; } /* Apply a tight line-height directly to list items */
+  .gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
+  .gui-content a:hover { background-color: #00FF00; color: black; }
 
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
-    #gui-window {
+    .gui-window {
       width: 90vw;
       max-width: none;
       top: 25px;
@@ -303,12 +303,12 @@
   </div>
 
   <div id="gui-container" class="gui-hidden">
-    <div id="gui-window">
-      <div id="gui-title-bar">
+    <div id="gui-window" class="gui-window">
+      <div id="gui-title-bar" class="gui-title-bar">
         <span>SYSTEM MENU</span>
-        <button id="gui-close-button">X</button>
+        <button id="gui-close-button" class="gui-close-button">X</button>
       </div>
-      <div id="gui-content">
+      <div id="gui-content" class="gui-content">
         <p>Select an option to execute the command:</p>
         <ul>
           <li><a href="#" data-command="bio">1. Read Bio</a></li>
@@ -319,7 +319,21 @@
           <li><a href="#" data-command="lockpick">6. Simulate Lockpicking</a></li>
         </ul>
       </div>
-      <div id="gui-resize-handle"></div>
+      <div id="gui-resize-handle" class="gui-resize-handle"></div>
+    </div>
+  </div>
+
+  <div id="pic-container" class="gui-hidden">
+    <div id="pic-window" class="gui-window">
+      <div id="pic-title-bar" class="gui-title-bar">
+        <span>IMAGE VIEWER</span>
+        <button id="pic-close-button" class="gui-close-button">X</button>
+      </div>
+      <div id="pic-content" class="gui-content">
+        <p>This is a placeholder for an image or other content.</p>
+        <p>In the future, this could display an actual image, maybe even a gallery.</p>
+      </div>
+      <div id="pic-resize-handle" class="gui-resize-handle"></div>
     </div>
   </div>
 
@@ -356,6 +370,8 @@
     const guiContainer = document.getElementById('gui-container');
     const guiCloseButton = document.getElementById('gui-close-button');
     const guiContent = document.getElementById('gui-content');
+    const picContainer = document.getElementById('pic-container');
+    const picCloseButton = document.getElementById('pic-close-button');
     const fadeOverlay = document.getElementById('fade-to-black');
     let activeTypingInterval = null; // To manage the typewriter effect
     let awaitingResponseFor = null; // State for multi-step commands
@@ -401,6 +417,7 @@
       'play': 'hack',
       'hm': 'hangman',
       'lp': 'lockpick',
+      'p': 'pic',
       'cv': 'transfer',
       'joke': 'lol',
       'resume': 'transfer',
@@ -448,6 +465,7 @@
       'hack': 'Initiate a security breach simulation',
       'hangman': 'Play a classic game of hangman',
       'lockpick': 'Simulate a simple lockpicking minigame',
+      'pic': 'Display a placeholder image viewer',
       'lol': 'Tell a random joke',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
@@ -568,7 +586,7 @@
 
     function showGui() {
       // Reset window position to center before showing
-      const guiWindow = document.getElementById('gui-window');
+      const guiWindow = document.getElementById('gui-window'); // Keep this for specific window reset
       // By clearing inline styles, the window reverts to its CSS-defined
       // position, which respects the media query for mobile/desktop.
       guiWindow.style.top = '';
@@ -587,6 +605,27 @@
       input.focus();
     }
 
+    function showPicWindow() {
+      const picWindow = document.getElementById('pic-window');
+      // By clearing inline styles, the window reverts to its CSS-defined
+      // position, which respects the media query for mobile/desktop.
+      picWindow.style.top = '';
+      picWindow.style.left = '';
+      picWindow.style.transform = '';
+
+      picContainer.classList.remove('gui-hidden');
+      picContainer.classList.add('gui-visible');
+      input.contentEditable = 'false';
+    }
+
+    function hidePicWindow() {
+      picContainer.classList.add('gui-hidden');
+      picContainer.classList.remove('gui-visible');
+      input.contentEditable = 'true';
+      input.focus();
+    }
+
+    
     function simulateCommand(command) {
       hideGui();
       appendTextToTerminal(`\n> ${command}\n`);
@@ -874,11 +913,11 @@
       let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
       const dragMouseDown = (e) => {
-    // Prevent dragging when clicking on interactive elements (content, close button, resize handle)
-    if (e.target.closest('#gui-content') || e.target.closest('#gui-close-button') || e.target.id === 'gui-resize-handle') {
-      return;
-    }
-
+        // Prevent dragging when clicking on interactive elements (content, close button, resize handle)
+        // Using classes makes this function reusable for any window.
+        if (e.target.closest('.gui-content') || e.target.closest('.gui-close-button') || e.target.closest('.gui-resize-handle')) {
+          return;
+        }
         // If the element is centered with transform, convert to absolute pixel positioning for dragging
         if (element.style.transform) {
           const rect = element.getBoundingClientRect();
@@ -1149,6 +1188,13 @@
     guiCloseButton.addEventListener('click', handleCloseClick);
     guiCloseButton.addEventListener('touchend', handleCloseClick);
 
+    const handlePicCloseClick = (event) => {
+      event.preventDefault();
+      hidePicWindow();
+    };
+    picCloseButton.addEventListener('click', handlePicCloseClick);
+    picCloseButton.addEventListener('touchend', handlePicCloseClick);
+
     const handleMenuClick = (event) => {
       const target = event.target.closest('a');
       if (target && target.dataset.command) {
@@ -1162,6 +1208,9 @@
 
     makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-window'));
     makeResizable(document.getElementById('gui-window'), document.getElementById('gui-resize-handle'));
+
+    makeDraggable(document.getElementById('pic-window'), document.getElementById('pic-window'));
+    makeResizable(document.getElementById('pic-window'), document.getElementById('pic-resize-handle'));
 
     printWelcomeMessage();
     // Initially disable scrolling in the content area for a clean launch.
@@ -1257,6 +1306,10 @@
       menu: () => {
         showGui();
         return null; // GUI handles its own display, no text output needed
+      },
+      pic: () => {
+        showPicWindow();
+        return "Launching image viewer...";
       },
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
