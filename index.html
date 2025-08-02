@@ -985,11 +985,19 @@
             awaitingResponseFor = null;
             const exitMessage = `\n\nSESSION TERMINATED.\nGOODBYE.`;
             typewriterEffect(exitMessage, () => {
-              // Instead of trying to close the window (which browsers block),
-              // we visually end the session by fading to black.
+              // We visually end the session by fading to black. After the fade animation
+              // completes, we will attempt to close the window.
               fadeOverlay.style.display = 'block';
+
+              // Add a listener that will close the window once the fade is complete.
+              fadeOverlay.addEventListener('transitionend', () => {
+                window.close();
+              }, { once: true });
+
               // A short delay ensures the 'display' change is rendered before the opacity transition starts.
-              setTimeout(() => { fadeOverlay.style.opacity = '1'; }, 50);
+              setTimeout(() => {
+                fadeOverlay.style.opacity = '1';
+              }, 50);
             });
           } else {
             appendTextToTerminal(`\nExit cancelled.\n`);
