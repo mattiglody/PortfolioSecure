@@ -339,8 +339,6 @@
           <li><a href="#" data-command="contact">2. View Contact Info</a></li>
           <li><a href="#" data-command="workhistory">3. View Work History</a></li>
           <li><a href="#" data-command="hack">4. Play Security Breach Minigame</a></li>
-          <li><a href="#" data-command="hangman">5. Play Hangman</a></li>
-          <li><a href="#" data-command="lockpick">6. Simulate Lockpicking</a></li>
         </ul>
       </div>
       <div id="gui-resize-handle" class="gui-resize-handle"></div>
@@ -453,11 +451,8 @@
       'm': 'menu',
       'game': 'hack',
       'play': 'hack',
-      'hm': 'hangman',
-      'lp': 'lockpick',
       'p': 'pic',
       'cv': 'transfer',
-      'joke': 'lol',
       'resume': 'transfer',
       'history': 'logs',
       'l': 'logs',
@@ -467,48 +462,19 @@
       'stop': 'cancel'
     };
 
-    const logs = [
-      "[LOG 1 - 07/24/2077 13:04:02] Overseer reports Vault 112 social conditioning protocol is proceeding as planned.",
-      "[LOG 2 - 07/25/2077 08:45:30] Internal sensor calibration completed. Minor anomalies in oxygen circulation flagged.",
-      "[LOG 3 - 07/25/2077 16:12:59] Unauthorized attempt to access cryo chamber controls. Technician ID #0043.",
-      "[LOG 4 - 07/26/2077 00:03:11] ALERT: Security lockdown initiated. Emergency protocol ZETA-5 activated.",
-      "[LOG 5 - 07/26/2077 06:27:41] Power fluctuation detected in Sector C3. Engineering dispatched.",
-      "[LOG 6 - 07/26/2077 09:15:20] Overseer broadcast: 'Remain calm. This is a containment drill.'",
-      "[LOG 7 - 07/26/2077 12:52:14] Multiple failed login attempts from unrecognized terminal.",
-      "[LOG 8 - 07/26/2077 18:34:57] Cryo Pod #12 suspension terminated. Medical team dispatched.",
-      "[LOG 9 - 07/27/2077 02:17:04] Temperature spike in cryogenics bay. Fire suppression holding.",
-      "[LOG 10 - 07/27/2077 05:39:33] Coolant leak in sub-level. Repairs underway.",
-      "[LOG 11 - 07/27/2077 08:00:00] Surface beacon pinged. No signal response. Possible comms malfunction.",
-      "[LOG 12 - 07/27/2077 10:22:18] Vault entrance locked. Unrecognized biometric access attempt logged.",
-      "[LOG 13 - 07/27/2077 13:14:45] Cafeteria nutrient dispenser malfunction. Manual override successful.",
-      "[LOG 14 - 07/27/2077 15:48:02] Resident anxiety levels elevated. Increasing recreational programs.",
-      "[LOG 15 - 07/27/2077 20:01:59] Motion detected in corridor 7-B. No personnel scheduled. Drone dispatched."
-    ];
-
-    const jokes = [
-      "Why don't programmers like nature? It has too many bugs.",
-      "What's the object-oriented way to get wealthy? Inheritance.",
-      "Why did the web developer go broke? Because he used up all his cache.",
-      "I told my wife she was drawing her eyebrows too high. She looked surprised.",
-      "Why don't scientists trust atoms? Because they make up everything!"
-    ];
-
     const commandDescriptions = {
       'help': 'List available commands',
       'bio': 'Display my professional bio',
       'contact': 'Display my contact information',
       'workhistory': 'Display my professional work history',
       'linkedin': 'Open my LinkedIn profile in a new tab',
-      'menu': 'Display a list of portfolio items',
+      'menu': 'Display a list of clickable menu items',
       'hack': 'Initiate a security breach simulation',
-      'hangman': 'Play a classic game of hangman',
-      'lockpick': 'Simulate a simple lockpicking minigame',
-      'pic': 'Display a placeholder image viewer',
-      'lol': 'Tell a random joke',
+      'pic': 'Display an image viewer',
       'transfer': 'Open my CV in a new tab',
       'logs': 'Display command history with timestamps',
       'clear': 'Clear the terminal and reset to welcome screen',
-      'exit': 'Close the terminal interface',
+      'exit': 'End the terminal interface',
       'cancel': 'Cancel the current running process or command (or use Ctrl+C)'
     };
 
@@ -540,78 +506,6 @@
     };
 
     let hackGameState = {};
-
-    const hangmanGameData = {
-      words: ['JAVASCRIPT', 'TERMINAL', 'PORTFOLIO', 'DEVELOPER', 'ENGINEER', 'PROTOCOL', 'AUTHENTICATE', 'ENCRYPTION', 'NETWORK', 'SERVER'],
-      stages: [
-/* 0 mistakes */
-`
-  +---+
-  |   |
-      |
-      |
-      |
-      |
-=========`,
-/* 1 mistake */
-`
-  +---+
-  |   |
-  O   |
-      |
-      |
-      |
-=========`,
-/* 2 mistakes */
-`
-  +---+
-  |   |
-  O   |
-  |   |
-      |
-      |
-=========`,
-/* 3 mistakes */
-`
-  +---+
-  |   |
-  O   |
- /|   |
-      |
-      |
-=========`,
-/* 4 mistakes */
-`
-  +---+
-  |   |
-  O   |
- /|\\  |
-      |
-      |
-=========`,
-/* 5 mistakes */
-`
-  +---+
-  |   |
-  O   |
- /|\\  |
- /    |
-      |
-=========`,
-/* 6 mistakes */
-`
-  +---+
-  |   |
-  O   |
- /|\\  |
- / \\  |
-      |
-=========`
-      ]
-    };
-
-    let hangmanGameState = {};
-    let lockpickGameState = {};
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML;
@@ -739,159 +633,6 @@
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       appendTextToTerminal(`\nDownloading transcript...`);
-    }
-
-    function displayHangmanState() {
-      const wordDisplay = hangmanGameState.word
-        .split('')
-        .map(letter => (hangmanGameState.guessedLetters.includes(letter) ? letter : '_'))
-        .join(' ');
-
-      const stageArt = hangmanGameData.stages[hangmanGameState.mistakes];
-      const guessedDisplay = `Guessed: ${hangmanGameState.guessedLetters.join(', ')}`;
-
-      const output = `\n${stageArt}\n\n${wordDisplay}\n\n${guessedDisplay}\n\nEnter a letter:`;
-      appendTextToTerminal(output);
-    }
-
-    function startHangmanGame() {
-      awaitingResponseFor = 'hangman_game';
-      const word = hangmanGameData.words[Math.floor(Math.random() * hangmanGameData.words.length)];
-      hangmanGameState = {
-        word: word,
-        guessedLetters: [],
-        mistakes: 0
-      };
-
-      const gameScreen = `...INITIALIZING HANGMAN PROTOCOL...\nGuess the word. You have ${hangmanGameData.stages.length - 1} wrong guesses allowed.`;
-      typewriterEffect(gameScreen, () => {
-        displayHangmanState();
-        input.contentEditable = 'true';
-        input.focus();
-      });
-    }
-
-    function handleHangmanGuess(guess) {
-      guess = guess.toUpperCase();
-
-      // --- Input Validation ---
-      if (guess.length !== 1 || !/[A-Z]/.test(guess)) {
-        appendTextToTerminal(`\n> Invalid input. Please enter a single letter.\n`);
-        return;
-      }
-      if (hangmanGameState.guessedLetters.includes(guess)) {
-        appendTextToTerminal(`\n> You already guessed the letter '${guess}'. Try another.\n`);
-        return;
-      }
-
-      // --- Process Guess ---
-      hangmanGameState.guessedLetters.push(guess);
-
-      if (!hangmanGameState.word.includes(guess)) {
-        hangmanGameState.mistakes++;
-        appendTextToTerminal(`\n> INCORRECT!`);
-      } else {
-        appendTextToTerminal(`\n> CORRECT!`);
-      }
-
-      // --- Check for Win/Loss ---
-      const wordIsGuessed = hangmanGameState.word.split('').every(letter => hangmanGameState.guessedLetters.includes(letter));
-
-      if (wordIsGuessed) {
-        endHangmanGame(true);
-        return;
-      }
-
-      if (hangmanGameState.mistakes >= hangmanGameData.stages.length - 1) {
-        endHangmanGame(false);
-        return;
-      }
-
-      // --- Continue Game ---
-      displayHangmanState();
-    }
-
-    function endHangmanGame(won) {
-      awaitingResponseFor = null;
-      const finalWordDisplay = `\nThe word was: ${hangmanGameState.word}`;
-      appendTextToTerminal(finalWordDisplay);
-      
-      const message = won 
-        ? "\n...SUCCESS...\nYOU SURVIVED." 
-        : `\n...FAILURE...\n${hangmanGameData.stages[hangmanGameState.mistakes]}\nGAME OVER.`;
-        
-      typewriterEffect(message, () => {
-        appendTextToTerminal("\n");
-        input.contentEditable = 'true';
-        input.focus();
-      });
-    }
-
-    function startLockpickGame() {
-      awaitingResponseFor = 'lockpick_game';
-      const target = Math.floor(Math.random() * 100) + 1;
-      lockpickGameState = {
-        targetPosition: target,
-        attemptsLeft: 5
-      };
-
-      const gameScreen = `...INITIATING LOCKPICK SIMULATION...\nYou find a rusted footlocker. You have ${lockpickGameState.attemptsLeft} bobby pins.\nFind the sweet spot by entering a position [1-100].`;
-      typewriterEffect(gameScreen, () => {
-        appendTextToTerminal(`\nEnter position:`);
-        input.contentEditable = 'true';
-        input.focus();
-      });
-    }
-
-    function handleLockpickAttempt(attempt) {
-      const position = parseInt(attempt, 10);
-
-      if (isNaN(position) || position < 1 || position > 100) {
-        appendTextToTerminal(`\n> Invalid input. Please enter a number between 1 and 100.\n`);
-        return;
-      }
-
-      if (position === lockpickGameState.targetPosition) {
-        endLockpickGame(true);
-        return;
-      }
-
-      lockpickGameState.attemptsLeft--;
-
-      if (lockpickGameState.attemptsLeft <= 0) {
-        appendTextToTerminal(`\n> *SNAP!* Your bobby pin breaks.`);
-        endLockpickGame(false);
-        return;
-      }
-
-      let feedback = "\n> ";
-      feedback += (position > lockpickGameState.targetPosition) 
-        ? "The pin meets heavy resistance. You've pushed it too far.\n> "
-        : "The pin feels loose. Not enough pressure.\n> ";
-
-      const diff = Math.abs(lockpickGameState.targetPosition - position);
-      if (diff <= 5) {
-        feedback += "You feel a slight give... you're very close.";
-      } else if (diff <= 15) {
-        feedback += "You hear a faint metallic scrape. Getting warmer.";
-      } else {
-        feedback += "Nothing but solid tension. You're way off.";
-      }
-
-      appendTextToTerminal(`${feedback}\n> You have ${lockpickGameState.attemptsLeft} bobby pins left.\n\nEnter position:`);
-    }
-
-    function endLockpickGame(won) {
-      awaitingResponseFor = null;
-      const message = won 
-        ? "\n...*CLICK*...\nThe lock springs open. You find a dusty old comic book." 
-        : `\n...FAILURE...\nThe lock remains sealed.`;
-        
-      typewriterEffect(message, () => {
-        appendTextToTerminal("\n");
-        input.contentEditable = 'true';
-        input.focus();
-      });
     }
 
     function startHackGame() {
@@ -1114,14 +855,8 @@
             // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
-        case 'hangman_game':
-          handleHangmanGuess(response);
-          break;
         case 'hack_game':
           handleHackGuess(response);
-          break;
-        case 'lockpick_game':
-          handleLockpickAttempt(response);
           break;
       }
     }
@@ -1324,18 +1059,6 @@
         const url = 'https://www.linkedin.com/in/matthew-iglody/';
         window.open(url, '_blank');
         return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
-      },
-      lol: () => {
-        const randomIndex = Math.floor(Math.random() * jokes.length);
-        return jokes[randomIndex];
-      },
-      hangman: () => {
-        startHangmanGame();
-        return null; // Signal that output is handled asynchronously
-      },
-      lockpick: () => {
-        startLockpickGame();
-        return null; // Signal that output is handled asynchronously
       },
       hack: () => {
         startHackGame();
