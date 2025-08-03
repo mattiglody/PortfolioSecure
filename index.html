@@ -172,6 +172,24 @@
     animation: none; /* Don't flicker the GUI overlay */
   }
 
+  /* --- Fade Out Styles --- */
+  .fade-hidden {
+    display: none;
+  }
+
+  #fade-to-black {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    z-index: 9999; /* On top of everything */
+    opacity: 0;
+    transition: opacity 1.5s ease-in;
+    pointer-events: none;
+  }
+
   .gui-window {
     position: absolute;
     /* Default centered position for desktop */
@@ -205,16 +223,22 @@
     cursor: move;
   }
 
-  .gui-resize-handle {
+  .resize-handle {
     position: absolute;
     width: 15px;
     height: 15px;
     bottom: 0;
+    z-index: 10;
+  }
+  .resize-handle.se {
     right: 0;
     cursor: se-resize;
-    z-index: 10; /* On top of the draggable area */
   }
-
+  .resize-handle.sw {
+    left: 0;
+    cursor: sw-resize;
+  }
+  
   .gui-close-button {
     background: none;
     border: none;
@@ -230,7 +254,7 @@
   .gui-content {
     background-color: black; /* Content area has a black background */
     color: #00FF00; /* Text inside is green */
-    padding: 0 15px;
+    padding: 0 15px 5px; /* top:0, horizontal:15, bottom:5 */
     flex-grow: 1; /* Allows content to fill available space when resizing */
     overflow: auto; /* Add scrollbar if content overflows */
     cursor: default;
@@ -254,11 +278,24 @@
     min-height: 0;
     width: 100%; /* Ensure it takes up the container's width */
   }
-  .gui-content p { margin: 0; line-height: 1.1; } /* Apply a tight line-height directly to the paragraph */
+  /* Target the header div specifically to give it a bottom margin, avoiding <p> tag default margin issues. */
+  #gui-content > div:first-child,
+  #wh-content > div:first-child {
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+  .gui-content p { margin: 0 0 2px 0; line-height: 1; } /* Tighter line-height and controlled margin */
   .gui-content ul { list-style: none; padding: 0; margin: 0; }
-  .gui-content li { margin-bottom: 0; line-height: 1.1; } /* Apply a tight line-height directly to list items */
+  .gui-content li { margin-bottom: 2px; line-height: 1; } /* Tighter line-height and a tiny bit of space between items */
   .gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
   .gui-content a:hover { background-color: #00FF00; color: black; }
+
+  /*
+   * Specific overrides for the main System Menu.
+   * This creates a compact list, which visually balances better with the short menu items,
+   * making it feel more consistent with the other windows.
+  */
+  #gui-content li { margin-bottom: 0; } /* Make the list items have no space between them */
 
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
@@ -311,14 +348,15 @@
         <button id="gui-close-button" class="gui-close-button">X</button>
       </div>
       <div id="gui-content" class="gui-content">
-        <p>Select an option to execute the command:</p>
+        <div>Select an option to execute the command:</div>
         <ul>
           <li><a href="#" data-command="bio">1. Read Bio</a></li>
           <li><a href="#" data-command="contact">2. View Contact Info</a></li>
           <li><a href="#" data-command="workhistory">3. View Work History</a></li>
         </ul>
       </div>
-      <div id="gui-resize-handle" class="gui-resize-handle"></div>
+      <div class="resize-handle se"></div>
+      <div class="resize-handle sw"></div>
     </div>
   </div>
 
@@ -331,7 +369,8 @@
       <div id="wh-content" class="gui-content">
         <!-- This will be populated by JavaScript -->
       </div>
-      <div id="wh-resize-handle" class="gui-resize-handle"></div>
+      <div class="resize-handle se"></div>
+      <div class="resize-handle sw"></div>
     </div>
   </div>
 
@@ -346,9 +385,12 @@
         <img src="pics/Matt_Caricature.PNG" alt="Matt_Headshot">
         <!--<p>In the future, this could display an actual image, maybe even a gallery.</p>-->
       </div>
-      <div id="pic-resize-handle" class="gui-resize-handle"></div>
+      <div class="resize-handle se"></div>
+      <div class="resize-handle sw"></div>
     </div>
   </div>
+
+  <div id="fade-to-black" class="fade-hidden"></div>
 
   <script>
     const terminal = document.getElementById('terminal');
@@ -387,6 +429,7 @@
     const whWindow = document.getElementById('wh-window');
     const whCloseButton = document.getElementById('wh-close-button');
     const whContent = document.getElementById('wh-content');
+    const fadeOverlay = document.getElementById('fade-to-black');
     let activeTypingInterval = null; // To manage the typewriter effect
     let awaitingResponseFor = null; // State for multi-step commands
     const commandHistory = [];
@@ -509,9 +552,15 @@
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML; // Set the initial static content
-      const helpText = commands.help(); // Generate the help text
-      // Append the help text just like a command output for consistency
-      appendTextToTerminal(`\n${helpText}\n`);
+      const isMobile = window.innerWidth <= 768; // Match the CSS breakpoint
+      if (!isMobile) {
+        const helpText = commands.help(); // Generate the help text
+        // Append the help text just like a command output for consistency
+        appendTextToTerminal(`\n${helpText}\n`);
+      } else {
+        // On mobile, just show a simple prompt to save space.
+        appendTextToTerminal(`\nType 'help' for a list of commands.\n`);
+      }
     }
 
     function bringToFront(element) {
@@ -582,7 +631,7 @@
     }
 
     function populateWhList() {
-      let content = '<p>Select a position to view details:</p><ul>';
+      let content = '<div>Select a position to view details:</div><ul>';
       Object.entries(workHistoryDetails).forEach(([key, value]) => {
         content += `<li><a href="#" data-job-id="${key}">${value.title}</a></li>`;
       });
@@ -679,7 +728,7 @@
       const dragMouseDown = (e) => {
         // Prevent dragging when clicking on interactive elements (content, close button, resize handle)
         // Using classes makes this function reusable for any window.
-        if (e.target.closest('.gui-content') || e.target.closest('.gui-close-button') || e.target.closest('.gui-resize-handle')) {
+        if (e.target.closest('.gui-content') || e.target.closest('.gui-close-button') || e.target.closest('.resize-handle')) {
           return;
         }
         // If the element is centered with transform, convert to absolute pixel positioning for dragging
@@ -728,15 +777,34 @@
       handle.addEventListener('touchstart', dragMouseDown);
     }
 
-    function makeResizable(element, handle) {
-      let initialX, initialY, initialWidth, initialHeight;
+    function makeResizable(element) {
+      let initialX, initialY, initialWidth, initialHeight, initialLeft;
+      let direction = '';
 
       const resizeMouseDown = (e) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent triggering the drag behavior on the parent
 
+        // If the element is centered with transform, convert to absolute pixel positioning.
+        // This ensures 'offsetLeft' is reliable for calculations.
+        if (element.style.transform) {
+          const rect = element.getBoundingClientRect();
+          element.style.transform = 'none';
+          element.style.left = `${rect.left}px`;
+          element.style.top = `${rect.top}px`;
+        }
+
+        if (e.target.classList.contains('se')) {
+          direction = 'se';
+        } else if (e.target.classList.contains('sw')) {
+          direction = 'sw';
+        } else {
+          return;
+        }
+
         initialWidth = element.offsetWidth;
         initialHeight = element.offsetHeight;
+        initialLeft = element.offsetLeft;
 
         if (e.type === 'touchstart') {
           initialX = e.touches[0].clientX;
@@ -746,31 +814,58 @@
           initialY = e.clientY;
         }
 
-        document.addEventListener('mousemove', elementResize);
+        document.addEventListener('mousemove', elementResize, { passive: false });
         document.addEventListener('touchmove', elementResize, { passive: false });
-        document.addEventListener('mouseup', stopResize);
-        document.addEventListener('touchend', stopResize);
+        document.addEventListener('mouseup', stopResize, { once: true });
+        document.addEventListener('touchend', stopResize, { once: true });
       };
 
       const elementResize = (e) => {
-        if (e.type === 'touchmove') e.preventDefault();
-        
+        // Prevent page scroll on touch devices
+        if (e.type === 'touchmove') {
+          e.preventDefault();
+        }
+
         const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
 
-        element.style.width = (initialWidth + (clientX - initialX)) + 'px';
-        element.style.height = (initialHeight + (clientY - initialY)) + 'px';
+        const dx = clientX - initialX;
+        const dy = clientY - initialY;
+
+        // Get min dimensions from CSS to make resizing more robust.
+        const styles = window.getComputedStyle(element);
+        const minWidth = parseInt(styles.minWidth, 10);
+        const minHeight = parseInt(styles.minHeight, 10);
+
+        const newHeight = initialHeight + dy;
+        if (newHeight >= minHeight) {
+          element.style.height = newHeight + 'px';
+        }
+
+        if (direction === 'se') {
+          const newWidth = initialWidth + dx;
+          if (newWidth >= minWidth) {
+            element.style.width = newWidth + 'px';
+          }
+        } else if (direction === 'sw') {
+          const newWidth = initialWidth - dx;
+          if (newWidth >= minWidth) {
+            element.style.width = newWidth + 'px';
+            element.style.left = (initialLeft + dx) + 'px';
+          }
+        }
       };
 
       const stopResize = () => {
         document.removeEventListener('mousemove', elementResize);
         document.removeEventListener('touchmove', elementResize);
-        document.removeEventListener('mouseup', stopResize);
-        document.removeEventListener('touchend', stopResize);
       };
 
-      handle.addEventListener('mousedown', resizeMouseDown);
-      handle.addEventListener('touchstart', resizeMouseDown);
+      const handles = element.querySelectorAll('.resize-handle');
+      handles.forEach(handle => {
+        handle.addEventListener('mousedown', resizeMouseDown);
+        handle.addEventListener('touchstart', resizeMouseDown);
+      });
     }
 
     function handleResponse(response) {
@@ -788,8 +883,19 @@
             awaitingResponseFor = null;
             const exitMessage = `\n\nSESSION TERMINATED.\nGOODBYE.`;
             typewriterEffect(exitMessage, () => {
-              // The session is now visually terminated. The input field remains
-              // disabled from the typewriter effect, effectively ending interaction.
+              // We visually end the session by fading to black. After the fade animation
+              // completes, we will attempt to close the window.
+              fadeOverlay.style.display = 'block';
+
+              // Add a listener that will close the window once the fade is complete.
+              fadeOverlay.addEventListener('transitionend', () => {
+                window.close();
+              }, { once: true });
+
+              // A short delay ensures the 'display' change is rendered before the opacity transition starts.
+              setTimeout(() => {
+                fadeOverlay.style.opacity = '1';
+              }, 50);
             });
           } else {
             appendTextToTerminal(`\nExit cancelled.\n`);
@@ -925,7 +1031,6 @@
     };
     whCloseButton.addEventListener('click', handleWhCloseClick);
     whCloseButton.addEventListener('touchend', handleWhCloseClick);
-
 
     const handleMenuClick = (event) => {
       const target = event.target.closest('a');
