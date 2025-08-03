@@ -167,32 +167,9 @@
   }
 
   .gui-visible {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.75); /* Dim the background */
-    z-index: 100;
+    /* This class is now just a marker for visibility. */
+    /* The .gui-window inside will handle its own positioning and stacking. */
     animation: none; /* Don't flicker the GUI overlay */
-  }
-
-  /* --- Fade Out Styles --- */
-  .fade-hidden {
-    display: none;
-  }
-
-  #fade-to-black {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: black;
-    z-index: 9999; /* On top of everything */
-    opacity: 0;
-    transition: opacity 1.5s ease-in;
-    pointer-events: none;
   }
 
   .gui-window {
@@ -210,6 +187,7 @@
     min-height: 150px;
     font-family: 'Courier New', Courier, monospace;
     padding: 1px; /* This padding creates a very thin border */
+    z-index: 100; /* Base z-index for windows */
     cursor: move;
     display: flex;
     flex-direction: column;
@@ -344,6 +322,19 @@
     </div>
   </div>
 
+  <div id="wh-container" class="gui-hidden">
+    <div id="wh-window" class="gui-window">
+      <div id="wh-title-bar" class="gui-title-bar">
+        <span>Work History</span>
+        <button id="wh-close-button" class="gui-close-button">X</button>
+      </div>
+      <div id="wh-content" class="gui-content">
+        <!-- This will be populated by JavaScript -->
+      </div>
+      <div id="wh-resize-handle" class="gui-resize-handle"></div>
+    </div>
+  </div>
+
   <div id="pic-container" class="gui-hidden">
     <div id="pic-window" class="gui-window">
       <div id="pic-title-bar" class="gui-title-bar">
@@ -358,8 +349,6 @@
       <div id="pic-resize-handle" class="gui-resize-handle"></div>
     </div>
   </div>
-
-  <div id="fade-to-black" class="fade-hidden"></div>
 
   <script>
     const terminal = document.getElementById('terminal');
@@ -388,14 +377,20 @@
 
     // --- Global State & Element Refs ---
     const guiContainer = document.getElementById('gui-container');
+    const guiWindow = document.getElementById('gui-window');
     const guiCloseButton = document.getElementById('gui-close-button');
     const guiContent = document.getElementById('gui-content');
     const picContainer = document.getElementById('pic-container');
+    const picWindow = document.getElementById('pic-window');
     const picCloseButton = document.getElementById('pic-close-button');
-    const fadeOverlay = document.getElementById('fade-to-black');
+    const whContainer = document.getElementById('wh-container');
+    const whWindow = document.getElementById('wh-window');
+    const whCloseButton = document.getElementById('wh-close-button');
+    const whContent = document.getElementById('wh-content');
     let activeTypingInterval = null; // To manage the typewriter effect
     let awaitingResponseFor = null; // State for multi-step commands
     const commandHistory = [];
+    let highestZ = 100; // For window stacking
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     document.body.addEventListener('click', (event) => {
@@ -423,15 +418,33 @@
       }
       // Handle Escape key to close GUI windows
       else if (event.key === 'Escape' || event.key === 'Esc') {
-        // Check if the main GUI menu is visible and close it
-        if (guiContainer.classList.contains('gui-visible')) {
-          event.preventDefault(); // Prevent any default browser action
-          hideGui();
-        }
-        // Check if the picture viewer is visible and close it
-        else if (picContainer.classList.contains('gui-visible')) {
-          event.preventDefault(); // Prevent any default browser action
-          hidePicWindow();
+        const isGuiVisible = guiContainer.classList.contains('gui-visible');
+        const isPicVisible = picContainer.classList.contains('gui-visible');
+        const isWhVisible = whContainer.classList.contains('gui-visible');
+
+        if (isGuiVisible || isPicVisible || isWhVisible) {
+          event.preventDefault(); // Prevent default browser action if any window is open
+
+          // Find the top-most window and close it.
+          let topWindow = null;
+          let maxZ = -1;
+
+          const windows = [
+            { name: 'gui', visible: isGuiVisible, element: guiWindow },
+            { name: 'pic', visible: isPicVisible, element: picWindow },
+            { name: 'wh', visible: isWhVisible, element: whWindow }
+          ];
+
+          windows.forEach(win => {
+            if (win.visible) {
+              const z = parseInt(win.element.style.zIndex) || 0;
+              if (z > maxZ) { maxZ = z; topWindow = win.name; }
+            }
+          });
+
+          if (topWindow === 'gui') hideGui();
+          else if (topWindow === 'pic') hidePicWindow();
+          else if (topWindow === 'wh') hideWhWindow();
         }
       }
     });
@@ -501,14 +514,19 @@
       appendTextToTerminal(`\n${helpText}\n`);
     }
 
+    function bringToFront(element) {
+      highestZ++;
+      element.style.zIndex = highestZ;
+    }
+
     function appendTextToTerminal(text) {
       // Appending a text node is safer than innerHTML and respects the `white-space: pre-wrap` style.
       terminal.appendChild(document.createTextNode(text));
     }
 
     function showGui() {
-      // Reset window position to center before showing
-      const guiWindow = document.getElementById('gui-window'); // Keep this for specific window reset
+      bringToFront(guiWindow);
+
       // By clearing inline styles, the window reverts to its CSS-defined
       // position, which respects the media query for mobile/desktop.
       guiWindow.style.top = '';
@@ -517,18 +535,17 @@
 
       guiContainer.classList.remove('gui-hidden');
       guiContainer.classList.add('gui-visible');
-      input.contentEditable = 'false'; // Disable terminal input while GUI is open
     }
 
     function hideGui() {
       guiContainer.classList.add('gui-hidden');
       guiContainer.classList.remove('gui-visible');
-      input.contentEditable = 'true'; // Re-enable terminal input
       input.focus();
     }
 
     function showPicWindow() {
-      const picWindow = document.getElementById('pic-window');
+      bringToFront(picWindow);
+
       // By clearing inline styles, the window reverts to its CSS-defined
       // position, which respects the media query for mobile/desktop.
       picWindow.style.top = '';
@@ -537,19 +554,50 @@
 
       picContainer.classList.remove('gui-hidden');
       picContainer.classList.add('gui-visible');
-      input.contentEditable = 'false';
     }
 
     function hidePicWindow() {
       picContainer.classList.add('gui-hidden');
       picContainer.classList.remove('gui-visible');
-      input.contentEditable = 'true';
       input.focus();
     }
 
+    function showWhWindow() {
+      bringToFront(whWindow);
+      populateWhList(); // Populate with the list of jobs
+
+      // Reset window position
+      whWindow.style.top = '';
+      whWindow.style.left = '';
+      whWindow.style.transform = '';
+
+      whContainer.classList.remove('gui-hidden');
+      whContainer.classList.add('gui-visible');
+    }
+
+    function hideWhWindow() {
+      whContainer.classList.add('gui-hidden');
+      whContainer.classList.remove('gui-visible');
+      input.focus();
+    }
+
+    function populateWhList() {
+      let content = '<p>Select a position to view details:</p><ul>';
+      Object.entries(workHistoryDetails).forEach(([key, value]) => {
+        content += `<li><a href="#" data-job-id="${key}">${value.title}</a></li>`;
+      });
+      content += '</ul>';
+      whContent.innerHTML = content;
+    }
+
+    function populateWhDetail(jobId) {
+      const job = workHistoryDetails[jobId];
+      if (!job) return;
+      let content = `<p><strong>${job.title}</strong></p><p style="white-space: normal; margin-top: 1em;">${job.description}</p><br><p><a href="#" data-job-id="back">-- Back to List --</a></p>`;
+      whContent.innerHTML = content;
+    }
     
     function simulateCommand(command) {
-      hideGui();
       appendTextToTerminal(`\n> ${command}\n`);
       commandHistory.push({ text: command, timestamp: new Date() });
       historyIndex = commandHistory.length;
@@ -740,19 +788,8 @@
             awaitingResponseFor = null;
             const exitMessage = `\n\nSESSION TERMINATED.\nGOODBYE.`;
             typewriterEffect(exitMessage, () => {
-              // We visually end the session by fading to black. After the fade animation
-              // completes, we will attempt to close the window.
-              fadeOverlay.style.display = 'block';
-
-              // Add a listener that will close the window once the fade is complete.
-              fadeOverlay.addEventListener('transitionend', () => {
-                window.close();
-              }, { once: true });
-
-              // A short delay ensures the 'display' change is rendered before the opacity transition starts.
-              setTimeout(() => {
-                fadeOverlay.style.opacity = '1';
-              }, 50);
+              // The session is now visually terminated. The input field remains
+              // disabled from the typewriter effect, effectively ending interaction.
             });
           } else {
             appendTextToTerminal(`\nExit cancelled.\n`);
@@ -770,26 +807,6 @@
           } else {
             appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
-          }
-          break;
-        case 'workhistory_select':
-          if (response === 'back') {
-            appendTextToTerminal(`\nReturning to main prompt.\n`);
-            awaitingResponseFor = null;
-            break;
-          }
-          const job = workHistoryDetails[response];
-          if (job) {
-            awaitingResponseFor = null; // Valid selection, so we're done with the prompt.
-            const fullText = `${job.title}\n----------------------------------------\n${job.description}`;
-            typewriterEffect(fullText, () => {
-              appendTextToTerminal("\n");
-              input.contentEditable = 'true';
-              input.focus();
-            });
-          } else {
-            appendTextToTerminal(`\nInvalid selection. Please enter a number from the list or type 'back' to return.\n`);
-            // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
       }
@@ -902,22 +919,52 @@
     picCloseButton.addEventListener('click', handlePicCloseClick);
     picCloseButton.addEventListener('touchend', handlePicCloseClick);
 
+    const handleWhCloseClick = (event) => {
+      event.preventDefault();
+      hideWhWindow();
+    };
+    whCloseButton.addEventListener('click', handleWhCloseClick);
+    whCloseButton.addEventListener('touchend', handleWhCloseClick);
+
+
     const handleMenuClick = (event) => {
       const target = event.target.closest('a');
       if (target && target.dataset.command) {
         event.preventDefault();
         const command = target.dataset.command;
         simulateCommand(command);
+        hideGui(); // Close the window after selection
       }
     };
     guiContent.addEventListener('click', handleMenuClick);
     guiContent.addEventListener('touchend', handleMenuClick);
+
+    const handleWhClick = (event) => {
+      const target = event.target.closest('a');
+      if (target && target.dataset.jobId) {
+        event.preventDefault();
+        const jobId = target.dataset.jobId;
+        if (jobId === 'back') {
+          populateWhList();
+        } else {
+          populateWhDetail(jobId);
+        }
+      }
+    };
+    whContent.addEventListener('click', handleWhClick);
+    whContent.addEventListener('touchend', handleWhClick);
 
     makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-title-bar'));
     makeResizable(document.getElementById('gui-window'), document.getElementById('gui-resize-handle'));
 
     makeDraggable(document.getElementById('pic-window'), document.getElementById('pic-title-bar'));
     makeResizable(document.getElementById('pic-window'), document.getElementById('pic-resize-handle'));
+
+    makeDraggable(document.getElementById('wh-window'), document.getElementById('wh-title-bar'));
+    makeResizable(document.getElementById('wh-window'), document.getElementById('wh-resize-handle'));
+
+    guiWindow.addEventListener('mousedown', () => bringToFront(guiWindow));
+    picWindow.addEventListener('mousedown', () => bringToFront(picWindow));
 
     const commands = {
       help: () => {
@@ -979,11 +1026,8 @@
         return null; // Signal that output is handled asynchronously
       },
       workhistory: () => {
-        awaitingResponseFor = 'workhistory_select';
-        const jobList = Object.entries(workHistoryDetails)
-          .map(([key, value]) => `${key}. ${value.title}`)
-          .join('\n');
-        return `WORK HISTORY:\n${jobList}\n\nEnter a number to learn more, or type 'back' to return.`;
+        showWhWindow();
+        return "Launching Work History viewer...";
       },
       linkedin: () => {
         const url = 'https://www.linkedin.com/in/matthew-iglody/';
@@ -1047,6 +1091,7 @@
     // --- INITIALIZATION ---
     printWelcomeMessage();
     contentWrapper.classList.add('no-scroll-on-launch');
+    whWindow.addEventListener('mousedown', () => bringToFront(whWindow));
   </script>
 </body>
 </html>
