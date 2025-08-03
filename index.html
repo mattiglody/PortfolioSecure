@@ -443,6 +443,7 @@
     let activeTypingInterval = null; // To manage the typewriter effect
     let awaitingResponseFor = null; // State for multi-step commands
     const commandHistory = [];
+    let bioPartIndex = 0; // For multi-part bio
     let highestZ = 100; // For window stacking
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
@@ -540,8 +541,8 @@
 
     const workHistoryDetails = {
       '1': {
-        title: '2014-2016 | Desktop Support Technician | Good Samaritan Regional Medical Center, Suffern, NY',
-        description: 'Placeholder text for your first role. Describe your responsibilities and achievements here.'
+        title: '2014-2016 | Desktop Support Technician | Good Samaritan Regional Medical Center | Suffern, NY',
+        description: 'Build and maintain end user PC workstations, laptops and peripherals. Move computers throughout hospital departments and 15+ remote doctor’s practices.'
       },
       '2': {
         title: '2016-2019 | Solutions Analyst II - Radiology IT | NYU Langone Health, New York, NY',
@@ -557,8 +558,12 @@
       }
     };
 
-    const bioTextPart1 = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
-    const bioTextPart2 = "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]";
+    const bioParts = [
+      "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.",
+      "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]",
+      "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]",
+      "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]"
+    ];
 
     function printWelcomeMessage() {
       terminal.innerHTML = initialWelcomeHTML; // Set the initial static content
@@ -649,12 +654,35 @@
       whContent.innerHTML = content;
     }
 
-    function populateWhDetail(jobId) {
-      const job = workHistoryDetails[jobId];
-      if (!job) return;
-      let content = `<p><strong>${job.title}</strong></p><p style="white-space: normal; margin-top: 1em;">${job.description}</p><br><p><a href="#" data-job-id="back">-- Back to List --</a></p>`;
-      whContent.innerHTML = content;
-    }
+     function populateWhDetail(jobId) {
+       const job = workHistoryDetails[jobId];
+       if (!job) return;
+ 
+       // Clear the content area first
+       whContent.innerHTML = '';
+ 
+       // Add the static title
+       const titleElement = document.createElement('p');
+       titleElement.innerHTML = `<strong>${job.title}</strong>`;
+       whContent.appendChild(titleElement);
+ 
+       // Add a container for the description that will be typed out
+       const descriptionContainer = document.createElement('p');
+       descriptionContainer.style.whiteSpace = 'normal';
+       descriptionContainer.style.marginTop = '1em';
+       whContent.appendChild(descriptionContainer);
+ 
+       // Add a line break
+       whContent.appendChild(document.createElement('br'));
+ 
+       // Add the "Back to List" link
+       const backLinkContainer = document.createElement('p');
+       backLinkContainer.innerHTML = `<a href="#" data-job-id="back">-- Back to List --</a>`;
+       whContent.appendChild(backLinkContainer);
+ 
+       // Use the new GUI typewriter effect
+       guiTypewriterEffect(job.description, descriptionContainer);
+     }
     
     function simulateCommand(command) {
       appendTextToTerminal(`\n> ${command}\n`);
@@ -687,6 +715,28 @@
           if (onComplete) onComplete();
         }
       }, 30); // Adjust typing speed here (in milliseconds)
+    }
+
+    // A simplified typewriter for GUI elements that doesn't affect the main terminal input.
+    function guiTypewriterEffect(text, targetElement, onComplete) {
+      // Stop any other typing process that might be running.
+      if (activeTypingInterval) {
+        clearInterval(activeTypingInterval);
+      }
+
+      let i = 0;
+      targetElement.innerHTML = ''; // Clear the target first
+
+      activeTypingInterval = setInterval(() => {
+        if (i < text.length) {
+          targetElement.textContent += text.charAt(i);
+          i++;
+        } else {
+          clearInterval(activeTypingInterval);
+          activeTypingInterval = null; // Reset the handle
+          if (onComplete) onComplete();
+        }
+      }, 30);
     }
 
     function cancelCurrentProcess() {
@@ -914,12 +964,26 @@
           break;
         case 'bio_continue':
           if (response === 'y' || response === 'yes') {
-            awaitingResponseFor = null; // Reset state before async operation
-            typewriterEffect(`\n${bioTextPart2}`, () => {
-              appendTextToTerminal("\n");
-              input.contentEditable = 'true';
-              input.focus();
-            });
+            if (bioPartIndex < bioParts.length) {
+              const textToShow = bioParts[bioPartIndex];
+              bioPartIndex++; // Increment for the next potential part
+
+              typewriterEffect(`\n${textToShow}`, () => {
+                if (bioPartIndex < bioParts.length) {
+                  // There are more parts to show
+                  appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
+                  // awaitingResponseFor is already 'bio_continue'
+                  input.contentEditable = 'true';
+                  input.focus();
+                } else {
+                  // This was the last part
+                  appendTextToTerminal("\n");
+                  awaitingResponseFor = null;
+                  input.contentEditable = 'true';
+                  input.focus();
+                }
+              });
+            }
           } else {
             appendTextToTerminal(`\nReturning to main prompt.\n`);
             awaitingResponseFor = null;
@@ -1119,12 +1183,13 @@
         return helpText.trim();
       },
       bio: () => {
-        typewriterEffect(bioTextPart1, () => {
+        typewriterEffect(bioParts[0], () => {
           // This function runs after the typing is complete
           appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
           awaitingResponseFor = 'bio_continue';
-          input.contentEditable = 'true'; // Re-enable the input field
-          input.focus(); // Focus on the input field for the next command
+          bioPartIndex = 1; // Set index for the *next* part
+          input.contentEditable = 'true';
+          input.focus();
           contentWrapper.scrollTop = contentWrapper.scrollHeight;
         });
         return null; // Signal that output is handled asynchronously
