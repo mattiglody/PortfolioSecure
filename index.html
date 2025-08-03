@@ -258,11 +258,21 @@
     flex-grow: 1; /* Allows content to fill available space when resizing */
     overflow: auto; /* Add scrollbar if content overflows */
     cursor: default;
-    /* Hide scrollbar for different browsers */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    /* --- Custom Scrollbar Styles (when needed) --- */
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #00FF00 black; /* thumb color track color - For Firefox */
   }
-  .gui-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+  /* For Webkit browsers (Chrome, Safari, Edge) */
+  .gui-content::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+  }
+  .gui-content::-webkit-scrollbar-track {
+    background: black; /* Color of the tracking area */
+  }
+  .gui-content::-webkit-scrollbar-thumb {
+    background-color: #00FF00; /* Color of the scroll thumb */
+    border: 2px solid black; /* Creates padding around thumb */
+  }
 
   /* Specific styles for the picture viewer content area */
   #pic-content {
