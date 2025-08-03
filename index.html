@@ -338,7 +338,6 @@
           <li><a href="#" data-command="bio">1. Read Bio</a></li>
           <li><a href="#" data-command="contact">2. View Contact Info</a></li>
           <li><a href="#" data-command="workhistory">3. View Work History</a></li>
-          <li><a href="#" data-command="hack">4. Play Security Breach Minigame</a></li>
         </ul>
       </div>
       <div id="gui-resize-handle" class="gui-resize-handle"></div>
@@ -385,8 +384,6 @@
 > INTERFACE PRIVILEGES: READ
 
 > WELCOME USER
-
-> TYPE "help" FOR AVAILABLE COMMANDS (not case sensitive)
 `;
 
     // --- Global State & Element Refs ---
@@ -449,8 +446,6 @@
       'exp': 'workhistory',
       'li': 'linkedin',
       'm': 'menu',
-      'game': 'hack',
-      'play': 'hack',
       'p': 'pic',
       'cv': 'transfer',
       'resume': 'transfer',
@@ -464,18 +459,17 @@
 
     const commandDescriptions = {
       'help': 'List available commands',
-      'bio': 'Display my professional bio',
-      'contact': 'Display my contact information',
-      'workhistory': 'Display my professional work history',
-      'linkedin': 'Open my LinkedIn profile in a new tab',
-      'menu': 'Display a list of clickable menu items',
-      'hack': 'Initiate a security breach simulation',
-      'pic': 'Display an image viewer',
-      'transfer': 'Open my CV in a new tab',
-      'logs': 'Display command history with timestamps',
-      'clear': 'Clear the terminal and reset to welcome screen',
+      'bio': 'Display professional bio',
+      'contact': 'Display contact information',
+      'workhistory': 'Display professional work history',
+      'linkedin': 'Open LinkedIn profile in a new tab',
+      'menu': 'Window with clickable menu',
+      'pic': 'Launch image viewer',
+      'transfer': 'Open CV in a new tab',
+      'logs': 'Shows command history with timestamps',
+      'clear': 'Clears the terminal and resets to welcome screen',
       'exit': 'End the terminal interface',
-      'cancel': 'Cancel the current running process or command (or use Ctrl+C)'
+      'cancel': 'Cancel current running process or command (or use Ctrl+C)'
     };
 
     const workHistoryDetails = {
@@ -500,15 +494,11 @@
     const bioTextPart1 = "Welcome to my professional digital footprint. I'm glad you could take the time to stop by and check it out. My name is Matthew Iglody and I am a mid-career professional who has been working in IT since College. The summer after my freshman year I began interning at Stryker orthopaedics and after graduating college I got my first job working in hospital IT near the town I grew up in.";
     const bioTextPart2 = "[Placeholder for the rest of the bio text. You can fill this in later with more details about your career progression and skills.]";
 
-    const hackGameData = {
-      words: ['SYSTEMS', 'ROUTERS', 'GATEWAY', 'NETWORK', 'CIRCUIT', 'ANALYZE', 'CONNECT', 'FIREWALL', 'PROTOCOL', 'DATABASE'],
-      attempts: 4
-    };
-
-    let hackGameState = {};
-
     function printWelcomeMessage() {
-      terminal.innerHTML = initialWelcomeHTML;
+      terminal.innerHTML = initialWelcomeHTML; // Set the initial static content
+      const helpText = commands.help(); // Generate the help text
+      // Append the help text just like a command output for consistency
+      appendTextToTerminal(`\n${helpText}\n`);
     }
 
     function appendTextToTerminal(text) {
@@ -633,59 +623,6 @@
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       appendTextToTerminal(`\nDownloading transcript...`);
-    }
-
-    function startHackGame() {
-      awaitingResponseFor = 'hack_game';
-      const password = hackGameData.words[Math.floor(Math.random() * hackGameData.words.length)];
-      hackGameState = {
-        password: password,
-        attemptsLeft: hackGameData.attempts
-      };
-
-      const gameScreen = `...DECRYPTING...\nPASSWORD REQUIRED.\n${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n\n${hackGameData.words.join('   ')}\n\nENTER PASSWORD:`;
-      typewriterEffect(gameScreen, () => {
-        input.contentEditable = 'true';
-        input.focus();
-      });
-    }
-
-    function handleHackGuess(guess) {
-      guess = guess.toUpperCase();
-      if (!hackGameData.words.includes(guess)) {
-        appendTextToTerminal(`\n> SYNTAX ERROR. UNKNOWN WORD.\n`);
-        return;
-      }
-
-      hackGameState.attemptsLeft--;
-
-      if (guess === hackGameState.password) {
-        endHackGame(true);
-        return;
-      }
-
-      if (hackGameState.attemptsLeft <= 0) {
-        endHackGame(false);
-        return;
-      }
-
-      let likeness = 0;
-      for (let i = 0; i < guess.length; i++) {
-        if (i < hackGameState.password.length && guess[i] === hackGameState.password[i]) {
-          likeness++;
-        }
-      }
-      appendTextToTerminal(`\n> ACCESS DENIED.\n> LIKENESS=${likeness}\n> ${hackGameState.attemptsLeft} ATTEMPTS REMAINING.\n`);
-    }
-
-    function endHackGame(won) {
-      awaitingResponseFor = null;
-      const message = won ? "\n...PASSWORD ACCEPTED...\nFIREWALL DISABLED.\nSYSTEM ACCESS GRANTED." : `\n...LOCKOUT INITIATED...\nTERMINAL LOCKED.\n\n> INTRUSION ATTEMPT LOGGED.`;
-      typewriterEffect(message, () => {
-        appendTextToTerminal("\n");
-        input.contentEditable = 'true';
-        input.focus();
-      });
     }
 
     function makeDraggable(element, handle) {
@@ -855,9 +792,6 @@
             // Don't reset awaitingResponseFor, so the user can try again.
           }
           break;
-        case 'hack_game':
-          handleHackGuess(response);
-          break;
       }
     }
 
@@ -985,10 +919,6 @@
     makeDraggable(document.getElementById('pic-window'), document.getElementById('pic-title-bar'));
     makeResizable(document.getElementById('pic-window'), document.getElementById('pic-resize-handle'));
 
-    printWelcomeMessage();
-    // Initially disable scrolling in the content area for a clean launch.
-    contentWrapper.classList.add('no-scroll-on-launch');
-
     const commands = {
       help: () => {
         const isMobile = window.innerWidth <= 768; // Match the CSS breakpoint
@@ -1060,10 +990,6 @@
         window.open(url, '_blank');
         return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
       },
-      hack: () => {
-        startHackGame();
-        return null; // Signal that output is handled asynchronously
-      },
       menu: () => {
         showGui();
         return null; // GUI handles its own display, no text output needed
@@ -1117,6 +1043,10 @@
       // Add a single newline for consistent spacing before the next prompt.
       appendTextToTerminal(output + "\n");
     }
+
+    // --- INITIALIZATION ---
+    printWelcomeMessage();
+    contentWrapper.classList.add('no-scroll-on-launch');
   </script>
 </body>
 </html>
