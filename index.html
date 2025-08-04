@@ -374,6 +374,11 @@
       transform: translateX(-50%);
     }
 
+    /* On mobile, constrain the max height of GUI windows to prevent them from being resized off-screen */
+    #pic-window, #bio-window {
+      max-height: 80vh;
+    }
+
     .terminal-container {
       padding: 0 1em; /* Reduce horizontal padding for more content space */
     }
