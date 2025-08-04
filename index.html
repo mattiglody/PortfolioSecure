@@ -211,16 +211,32 @@
     flex-direction: column;
   }
 
-  /* Specific override for the picture window to be smaller by default */
+  /* Specific override for the picture window to be smaller and positioned top-left */
   #pic-window {
     width: 250px;
     height: auto; /* Let content determine height */
+    top: 25px; /* Position from the top */
+    left: 25px; /* Position from the left */
+    transform: none; /* Override the default centering transform */
   }
 
-  /* Specific override for the work history window to be smaller by default */
-  #wh-window {
-    width: 320px; /* Make it a bit narrower */
-    max-height: 300px; /* Prevent it from becoming too tall on launch */
+  /* Specific override for the bio window to be positioned top-right */
+  #bio-window {
+    width: 450px;
+    height: 400px;
+    top: 25px; /* Position from the top */
+    right: 25px; /* Position from the right */
+    left: auto; /* Override the default left: 50% */
+    transform: none; /* Override the default centering transform */
+  }
+
+  #bio-content {
+    white-space: pre-wrap; /* Ensure newlines in bio text are respected */
+  }
+  /* Style for the inline input in the bio window to remove the focus outline */
+  #bio-content span[contenteditable="true"] {
+    outline: none;
+    display: inline-block; /* Ensures it behaves predictably */
   }
 
   .gui-title-bar {
@@ -302,62 +318,26 @@
     width: 100%; /* Ensure it takes up the container's width */
   }
   /* Target the header div specifically to give it a bottom margin, avoiding <p> tag default margin issues. */
-  #gui-content > div:first-child,
-  #wh-content > div:first-child {
+  #gui-content > div:first-child {
     margin-bottom: 2px;
     line-height: 1;
   }
   .gui-content p { margin: 0 0 2px 0; line-height: 1; } /* Tighter line-height and controlled margin */
   .gui-content ul { list-style: none; padding: 0; margin: 0; }
-  .gui-content li { margin-bottom: 2px; line-height: 1; } /* Tighter line-height and a tiny bit of space between items */
   .gui-content a { color: #00FF00; text-decoration: none; cursor: pointer; }
   .gui-content a:hover { background-color: #00FF00; color: black; }
 
-  /*
-   * Specific overrides for the main System Menu.
-   * This creates a compact list, which visually balances better with the short menu items,
-   * making it feel more consistent with the other windows.
-  */
-  #gui-content ul a {
-    display: block; /* Make the whole area clickable */
-    padding: 2px 0; /* Reduced vertical padding for a tighter feel */
+  .gui-footer {
+    background-color: black;
+    color: #00FF00;
+    padding: 2px 8px;
+    font-size: 12px;
+    text-align: center;
+    flex-shrink: 0; /* Prevent it from shrinking */
+    border-top: 1px solid #00FF00; /* Separator line */
+    min-height: 1.2em; /* Ensure it has some height */
+    line-height: 1.2em;
   }
-  #gui-content li { margin-bottom: 0; } /* Ensure list items themselves have no margin */
-
-  /* --- Work History (WH) Window Specific Styles --- */
-  #wh-content ul {
-    margin-top: 5px; /* Add a little space below the "Select a position..." text */
-  }
-
-  #wh-content li {
-    margin-bottom: 0; /* Override the generic li margin */
-  }
-
-  #wh-content li a {
-    display: block;
-    padding: 4px 5px; /* Further reduced vertical padding for a more precise hover area */
-    border-bottom: 1px solid rgba(0, 255, 0, 0.2); /* Faint separator line */
-    transition: all 0.1s ease-in-out; /* Smooth hover effect */
-  }
-
-  #wh-content li:last-child a {
-    border-bottom: none; /* No border on the last item */
-  }
-
-  #wh-content li a:hover {
-    background-color: #00FF00;
-    color: black;
-    padding-left: 10px; /* Indent on hover for a nice effect */
-  }
-
-  #wh-content li a span, .wh-detail-header span, .wh-detail-header strong {
-    display: block;
-    line-height: 1.15; /* Tighten up the line height */
-  }
-
-  .wh-title, .wh-company { padding-left: 1em; }
-  .wh-date { font-weight: bold; }
-  .wh-company { opacity: 0.7; font-size: 0.9em; }
 
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
@@ -403,39 +383,6 @@
     </footer>
   </div>
 
-  <div id="gui-container" class="gui-hidden">
-    <div id="gui-window" class="gui-window">
-      <div id="gui-title-bar" class="gui-title-bar">
-        <span>SYSTEM MENU</span>
-        <button id="gui-close-button" class="gui-close-button">X</button>
-      </div>
-      <div id="gui-content" class="gui-content">
-        <div>Select an option to execute the command:</div>
-        <ul>
-          <li><a href="#" data-command="bio">1. Read Bio</a></li>
-          <li><a href="#" data-command="contact">2. View Contact Info</a></li>
-          <li><a href="#" data-command="workhistory">3. View Work History</a></li>
-        </ul>
-      </div>
-      <div class="resize-handle se"></div>
-      <div class="resize-handle sw"></div>
-    </div>
-  </div>
-
-  <div id="wh-container" class="gui-hidden">
-    <div id="wh-window" class="gui-window">
-      <div id="wh-title-bar" class="gui-title-bar">
-        <span>Work History</span>
-        <button id="wh-close-button" class="gui-close-button">X</button>
-      </div>
-      <div id="wh-content" class="gui-content">
-        <!-- This will be populated by JavaScript -->
-      </div>
-      <div class="resize-handle se"></div>
-      <div class="resize-handle sw"></div>
-    </div>
-  </div>
-
   <div id="pic-container" class="gui-hidden">
     <div id="pic-window" class="gui-window">
       <div id="pic-title-bar" class="gui-title-bar">
@@ -452,6 +399,23 @@
     </div>
   </div>
 
+  <div id="bio-container" class="gui-hidden">
+    <div id="bio-window" class="gui-window">
+      <div id="bio-title-bar" class="gui-title-bar">
+        <span>BIO</span>
+        <button id="bio-close-button" class="gui-close-button">X</button>
+      </div>
+      <div id="bio-content" class="gui-content">
+        <!-- Populated by JS -->
+      </div>
+      <div id="bio-footer" class="gui-footer">
+        <!-- Populated by JS -->
+      </div>
+      <div class="resize-handle se"></div>
+      <div class="resize-handle sw"></div>
+    </div>
+  </div>
+
   <div id="fade-to-black" class="fade-hidden"></div>
 
   <script src="script.js"></script>
@@ -461,31 +425,33 @@
     const contentWrapper = document.querySelector('.content-wrapper');
 
     // --- Global State & Element Refs ---
-    const guiContainer = document.getElementById('gui-container');
-    const guiWindow = document.getElementById('gui-window');
-    const guiCloseButton = document.getElementById('gui-close-button');
-    const guiContent = document.getElementById('gui-content');
     const picContainer = document.getElementById('pic-container');
     const picWindow = document.getElementById('pic-window');
     const picCloseButton = document.getElementById('pic-close-button');
-    const whContainer = document.getElementById('wh-container');
-    const whWindow = document.getElementById('wh-window');
-    const whCloseButton = document.getElementById('wh-close-button');
-    const whContent = document.getElementById('wh-content');
+    const bioContainer = document.getElementById('bio-container');
+    const bioWindow = document.getElementById('bio-window');
+    const bioCloseButton = document.getElementById('bio-close-button');
+    const bioContent = document.getElementById('bio-content');
+    const bioFooter = document.getElementById('bio-footer');
     const fadeOverlay = document.getElementById('fade-to-black');
     let activeTypingInterval = null; // To manage the typewriter effect
+    let bioTypingInterval = null; // To manage the bio window's typewriter
     let awaitingResponseFor = null; // State for multi-step commands
     const commandHistory = [];
-    let bioPartIndex = 0; // For multi-part bio
+    let currentBioPartIndex = 0;
+    let bioAwaitingResponse = false;
     let highestZ = 100; // For window stacking
+    let windowStack = []; // To manage open window order
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     document.body.addEventListener('click', (event) => {
-      // If the user clicks on something that is not the input itself, focus the input.
-      // This is to avoid interfering with text selection inside the input field.
-      if (event.target !== input) {
-        input.focus();
+      // If the click is inside a GUI window or on the main input itself, do nothing.
+      // This allows interaction with GUI elements without losing focus.
+      if (event.target.closest('.gui-window') || event.target === input) {
+        return;
       }
+      // Otherwise, focus the main terminal input.
+      input.focus();
     });
 
     // Global keydown listener for system-wide shortcuts
@@ -505,34 +471,24 @@
       }
       // Handle Escape key to close GUI windows
       else if (event.key === 'Escape' || event.key === 'Esc') {
-        const isGuiVisible = guiContainer.classList.contains('gui-visible');
-        const isPicVisible = picContainer.classList.contains('gui-visible');
-        const isWhVisible = whContainer.classList.contains('gui-visible');
-
-        if (isGuiVisible || isPicVisible || isWhVisible) {
-          event.preventDefault(); // Prevent default browser action if any window is open
-
-          // Find the top-most window and close it.
-          let topWindow = null;
-          let maxZ = -1;
-
-          const windows = [
-            { name: 'gui', visible: isGuiVisible, element: guiWindow },
-            { name: 'pic', visible: isPicVisible, element: picWindow },
-            { name: 'wh', visible: isWhVisible, element: whWindow }
-          ];
-
-          windows.forEach(win => {
-            if (win.visible) {
-              const z = parseInt(win.element.style.zIndex) || 0;
-              if (z > maxZ) { maxZ = z; topWindow = win.name; }
-            }
-          });
-
-          if (topWindow === 'gui') hideGui();
-          else if (topWindow === 'pic') hidePicWindow();
-          else if (topWindow === 'wh') hideWhWindow();
+        // If there are any windows in our stack, close the top-most one.
+        if (windowStack.length > 0) {
+          event.preventDefault(); // Prevent default browser action
+          const topWindowId = windowStack[windowStack.length - 1];
+          if (topWindowId === 'pic-window') {
+            hidePicWindow();
+          } else if (topWindowId === 'bio-window') {
+            hideBioWindow();
+          }
         }
+      }
+    });
+
+    // Centralized handler to bring a window to the front when clicked.
+    document.addEventListener('mousedown', (event) => {
+      const clickedWindow = event.target.closest('.gui-window');
+      if (clickedWindow) {
+        bringToFront(clickedWindow);
       }
     });
 
@@ -552,30 +508,21 @@
     function bringToFront(element) {
       highestZ++;
       element.style.zIndex = highestZ;
+
+      // Manage the window stack to track the top-most window
+      const windowId = element.id;
+      // Remove from stack if it exists to avoid duplicates
+      const index = windowStack.indexOf(windowId);
+      if (index > -1) {
+        windowStack.splice(index, 1);
+      }
+      // Add to the end of the array (the "top" of the stack)
+      windowStack.push(windowId);
     }
 
     function appendTextToTerminal(text) {
       // Appending a text node is safer than innerHTML and respects the `white-space: pre-wrap` style.
       terminal.appendChild(document.createTextNode(text));
-    }
-
-    function showGui() {
-      bringToFront(guiWindow);
-
-      // By clearing inline styles, the window reverts to its CSS-defined
-      // position, which respects the media query for mobile/desktop.
-      guiWindow.style.top = '';
-      guiWindow.style.left = '';
-      guiWindow.style.transform = '';
-
-      guiContainer.classList.remove('gui-hidden');
-      guiContainer.classList.add('gui-visible');
-    }
-
-    function hideGui() {
-      guiContainer.classList.add('gui-hidden');
-      guiContainer.classList.remove('gui-visible');
-      input.focus();
     }
 
     function showPicWindow() {
@@ -594,78 +541,122 @@
     function hidePicWindow() {
       picContainer.classList.add('gui-hidden');
       picContainer.classList.remove('gui-visible');
+
+      // Remove this window from the stack
+      const index = windowStack.indexOf('pic-window');
+      if (index > -1) {
+        windowStack.splice(index, 1);
+      }
+
       input.focus();
     }
 
-    function showWhWindow() {
-      bringToFront(whWindow);
-      populateWhList(); // Populate with the list of jobs
+    function showBioWindow() {
+      bringToFront(bioWindow);
+
+      // Reset state every time the window is opened
+      currentBioPartIndex = 0;
+      bioAwaitingResponse = false;
+      bioContent.innerHTML = ''; // Clear previous content
+      bioFooter.innerHTML = ''; // Clear footer
+
+      // Start the typewriter process
+      typeNextBioPart();
 
       // Reset window position
-      whWindow.style.top = '';
-      whWindow.style.left = '';
-      whWindow.style.transform = '';
+      bioWindow.style.top = '';
+      bioWindow.style.left = '';
+      bioWindow.style.transform = '';
 
-      whContainer.classList.remove('gui-hidden');
-      whContainer.classList.add('gui-visible');
+      bioContainer.classList.remove('gui-hidden');
+      bioContainer.classList.add('gui-visible');
     }
 
-    function hideWhWindow() {
-      whContainer.classList.add('gui-hidden');
-      whContainer.classList.remove('gui-visible');
+    function handleBioResponseKeydown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const responseInput = event.target; // The input span itself
+        const response = responseInput.innerText.trim().toLowerCase();
+
+        // Clean up: make non-editable and remove listener to prevent re-entry
+        responseInput.contentEditable = 'false';
+        responseInput.removeAttribute('id'); // Remove the ID to prevent duplicates
+        responseInput.removeEventListener('keydown', handleBioResponseKeydown);
+        bioAwaitingResponse = false;
+
+        if (response === 'y' || response === 'yes') {
+          typeNextBioPart();
+        } else {
+          const terminationMessage = document.createTextNode('\n\nBio reading terminated.');
+          bioContent.appendChild(terminationMessage);
+          bioFooter.innerHTML = `<span>-- End of Bio --</span>`;
+        }
+      }
+    }
+
+    function typeNextBioPart() {
+      // Clear the footer before typing the next part
+      bioFooter.innerHTML = '';
+
+      if (currentBioPartIndex < bioParts.length) {
+        let textToType = bioParts[currentBioPartIndex];
+        const isFirstPart = currentBioPartIndex === 0;
+
+        // Prepend the prompt character to the very first part
+        if (isFirstPart) {
+          textToType = `> ${textToType}`;
+        } else {
+          // For subsequent parts, add spacing
+          bioContent.innerHTML += '\n\n';
+        }
+
+        // Create a new span for the typewriter to append to.
+        const typewriterSpan = document.createElement('span');
+        bioContent.appendChild(typewriterSpan);
+
+        guiTypewriterEffect(textToType, typewriterSpan, () => {
+          // onComplete callback
+          currentBioPartIndex++;
+          if (currentBioPartIndex < bioParts.length) {
+            // More parts exist, show the input prompt.
+            bioAwaitingResponse = true;
+            const promptText = document.createTextNode('\n\n> Would you like to continue reading? (y/n) ');
+            const responseInput = document.createElement('span');
+            responseInput.id = 'bio-response-input';
+            responseInput.contentEditable = 'true';
+
+            // Add the specific keydown listener for this input
+            responseInput.addEventListener('keydown', handleBioResponseKeydown);
+
+            bioContent.appendChild(promptText);
+            bioContent.appendChild(responseInput);
+
+          } else {
+            // This was the last part
+            bioFooter.innerHTML = `<span>-- End of Bio --</span>`;
+          }
+        });
+      }
+    }
+
+    function hideBioWindow() {
+      // If a typewriter is running for the bio, stop it.
+      if (bioTypingInterval) {
+        clearInterval(bioTypingInterval);
+        bioTypingInterval = null;
+      }
+      bioAwaitingResponse = false; // Reset the prompt state
+      bioContainer.classList.add('gui-hidden');
+      bioContainer.classList.remove('gui-visible');
+
+      // Remove this window from the stack
+      const index = windowStack.indexOf('bio-window');
+      if (index > -1) {
+        windowStack.splice(index, 1);
+      }
+
       input.focus();
     }
-
-    function populateWhList() {
-      let listHtml = '<div>Select a position to view details:</div><ul>';
-      // Reverse the order to show the most recent job first, which is standard.
-      Object.entries(workHistoryDetails).reverse().forEach(([key, value]) => {
-        const parts = value.title.split(' | ').map(p => p.trim());
-        const dateRange = parts[0] || '';
-        const jobTitle = parts[1] || '';
-        const company = parts[2] || '';
-
-        listHtml += `<li>
-                      <a href="#" data-job-id="${key}">
-                        <span class="wh-date">${dateRange}</span>
-                        <span class="wh-title">${jobTitle}</span>
-                        <span class="wh-company">${company}</span>
-                      </a>
-                    </li>`;
-      });
-      listHtml += '</ul>';
-      whContent.innerHTML = listHtml;
-    }
-
-     function populateWhDetail(jobId) {
-       const job = workHistoryDetails[jobId];
-       if (!job) return;
- 
-       whContent.innerHTML = '';
- 
-       const parts = job.title.split(' | ').map(p => p.trim());
-       const header = document.createElement('div');
-       header.classList.add('wh-detail-header');
-       header.innerHTML = `<span class="wh-date">${parts[0] || ''}</span>
-                         <strong class="wh-title">${parts[1] || ''}</strong>
-                         <span class="wh-company">${parts[2] || ''} - ${parts[3] || ''}</span>`;
-       whContent.appendChild(header);
- 
-       // Add a container for the description that will be typed out
-       const descriptionContainer = document.createElement('p');
-       descriptionContainer.style.whiteSpace = 'pre-wrap';
-       descriptionContainer.style.marginTop = '0.75em'; /* Reduced top margin for a tighter layout */
-       whContent.appendChild(descriptionContainer);
- 
-       // Add the "Back to List" link
-       const backLinkContainer = document.createElement('p');
-       backLinkContainer.style.marginTop = '1em'; /* Add space above the back link */
-       backLinkContainer.innerHTML = `<a href="#" data-job-id="back">-- Back to List --</a>`;
-       whContent.appendChild(backLinkContainer);
- 
-       // Use the new GUI typewriter effect
-       guiTypewriterEffect(job.description, descriptionContainer);
-     }
     
     function simulateCommand(command) {
       appendTextToTerminal(`\n> ${command}\n`);
@@ -702,21 +693,21 @@
 
     // A simplified typewriter for GUI elements that doesn't affect the main terminal input.
     function guiTypewriterEffect(text, targetElement, onComplete) {
-      // Stop any other typing process that might be running.
-      if (activeTypingInterval) {
-        clearInterval(activeTypingInterval);
+      // Stop any other bio typing process that might be running.
+      if (bioTypingInterval) {
+        clearInterval(bioTypingInterval);
       }
 
       let i = 0;
       targetElement.innerHTML = ''; // Clear the target first
 
-      activeTypingInterval = setInterval(() => {
+      bioTypingInterval = setInterval(() => {
         if (i < text.length) {
           targetElement.textContent += text.charAt(i);
           i++;
         } else {
-          clearInterval(activeTypingInterval);
-          activeTypingInterval = null; // Reset the handle
+          clearInterval(bioTypingInterval);
+          bioTypingInterval = null; // Reset the handle
           if (onComplete) onComplete();
         }
       }, 30);
@@ -986,33 +977,6 @@
             awaitingResponseFor = null;
           }
           break;
-        case 'bio_continue':
-          if (response === 'y' || response === 'yes') {
-            if (bioPartIndex < bioParts.length) {
-              const textToShow = bioParts[bioPartIndex];
-              bioPartIndex++; // Increment for the next potential part
-
-              typewriterEffect(`\n${textToShow}`, () => {
-                if (bioPartIndex < bioParts.length) {
-                  // There are more parts to show
-                  appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
-                  // awaitingResponseFor is already 'bio_continue'
-                  input.contentEditable = 'true';
-                  input.focus();
-                } else {
-                  // This was the last part
-                  appendTextToTerminal("\n");
-                  awaitingResponseFor = null;
-                  input.contentEditable = 'true';
-                  input.focus();
-                }
-              });
-            }
-          } else {
-            appendTextToTerminal(`\nReturning to main prompt.\n`);
-            awaitingResponseFor = null;
-          }
-          break;
       }
     }
 
@@ -1104,18 +1068,6 @@
       }
     });
 
-    // --- GUI Event Listeners ---
-    // We add listeners for both 'click' and 'touchend' to ensure the GUI is
-    // responsive on touch devices while maintaining compatibility with mouse input.
-    // Calling preventDefault() in the handler for 'touchend' stops the browser
-    // from firing a redundant 'click' event after a tap.
-    const handleCloseClick = (event) => {
-      event.preventDefault();
-      hideGui();
-    };
-    guiCloseButton.addEventListener('click', handleCloseClick);
-    guiCloseButton.addEventListener('touchend', handleCloseClick);
-
     const handlePicCloseClick = (event) => {
       event.preventDefault();
       hidePicWindow();
@@ -1123,108 +1075,29 @@
     picCloseButton.addEventListener('click', handlePicCloseClick);
     picCloseButton.addEventListener('touchend', handlePicCloseClick);
 
-    const handleWhCloseClick = (event) => {
+    const handleBioCloseClick = (event) => {
       event.preventDefault();
-      hideWhWindow();
+      hideBioWindow();
     };
-    whCloseButton.addEventListener('click', handleWhCloseClick);
-    whCloseButton.addEventListener('touchend', handleWhCloseClick);
+    bioCloseButton.addEventListener('click', handleBioCloseClick);
+    bioCloseButton.addEventListener('touchend', handleBioCloseClick);
 
-    // --- Improved System Menu Touch Handling ---
-    let menuTouchStartX = 0;
-    let menuTouchStartY = 0;
-    let menuIsScrolling = false;
-    const menuScrollThreshold = 15; // Consistent threshold
-
-    guiContent.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      menuTouchStartX = touch.clientX;
-      menuTouchStartY = touch.clientY;
-      menuIsScrolling = false;
-    }, { passive: true });
-
-    guiContent.addEventListener('touchmove', (e) => {
-      if (menuIsScrolling) return;
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - menuTouchStartX);
-      const dy = Math.abs(touch.clientY - menuTouchStartY);
-      if (dx > menuScrollThreshold || dy > menuScrollThreshold) {
-        menuIsScrolling = true;
-      }
-    }, { passive: true });
-
-    const handleMenuInteraction = (event) => {
-      if (event.type === 'touchend' && menuIsScrolling) {
-        return;
-      }
-      const target = event.target.closest('a');
-      if (target && target.dataset.command) {
-        event.preventDefault();
-        const command = target.dataset.command;
-        simulateCommand(command);
-        hideGui();
-      }
-    };
-    guiContent.addEventListener('click', handleMenuInteraction);
-    guiContent.addEventListener('touchend', handleMenuInteraction);
-
-    // --- Improved WH Window Touch Handling ---
-    // These variables track touch movement to differentiate a 'tap' from a 'scroll'.
-    let whTouchStartX = 0;
-    let whTouchStartY = 0;
-    let whIsScrolling = false;
-    const scrollThreshold = 15; // User must move finger more than 15px to be considered scrolling.
-
-    whContent.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      whTouchStartX = touch.clientX;
-      whTouchStartY = touch.clientY;
-      whIsScrolling = false; // Reset scroll flag on each new touch.
-    }, { passive: true });
-
-    whContent.addEventListener('touchmove', (e) => {
-      if (whIsScrolling) return; // No need to check further if it's already a scroll.
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - whTouchStartX);
-      const dy = Math.abs(touch.clientY - whTouchStartY);
-      if (dx > scrollThreshold || dy > scrollThreshold) {
-        whIsScrolling = true;
-      }
-    }, { passive: true });
-
-    const handleWhInteraction = (event) => {
-      // On touchend, if we detected a scroll, we do nothing to prevent accidental clicks.
-      if (event.type === 'touchend' && whIsScrolling) {
-        return;
-      }
-
-      const target = event.target.closest('a');
-      if (target && target.dataset.jobId) {
-        event.preventDefault(); // Prevent default link behavior and redundant 'click' events on touch.
-        const jobId = target.dataset.jobId;
-        if (jobId === 'back') {
-          populateWhList();
-        } else {
-          populateWhDetail(jobId);
+    // Add a listener to the bio content area to make it easier to focus the input.
+    bioContent.addEventListener('click', (event) => {
+      if (bioAwaitingResponse) {
+        const responseInput = document.getElementById('bio-response-input');
+        // If an input is active and the user clicks on the content area (but not the input itself), focus the input.
+        if (responseInput && event.target !== responseInput) {
+          moveCursorToEnd(responseInput);
         }
       }
-    };
-    // Use the new handler for both mouse clicks and touch taps.
-    whContent.addEventListener('click', handleWhInteraction);
-    whContent.addEventListener('touchend', handleWhInteraction);
-
-    makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-title-bar'));
-    makeResizable(document.getElementById('gui-window'));
+    });
 
     makeDraggable(document.getElementById('pic-window'), document.getElementById('pic-title-bar'));
     makeResizable(document.getElementById('pic-window'));
 
-    makeDraggable(document.getElementById('wh-window'), document.getElementById('wh-title-bar'));
-    makeResizable(document.getElementById('wh-window'));
-
-    guiWindow.addEventListener('mousedown', () => bringToFront(guiWindow));
-    picWindow.addEventListener('mousedown', () => bringToFront(picWindow));
-    whWindow.addEventListener('mousedown', () => bringToFront(whWindow));
+    makeDraggable(document.getElementById('bio-window'), document.getElementById('bio-title-bar'));
+    makeResizable(document.getElementById('bio-window'));
 
     const commands = {
       help: () => {
@@ -1264,16 +1137,8 @@
         return helpText.trim();
       },
       bio: () => {
-        typewriterEffect(bioParts[0], () => {
-          // This function runs after the typing is complete
-          appendTextToTerminal(`\n\nWould you like to continue reading? (y/n)`);
-          awaitingResponseFor = 'bio_continue';
-          bioPartIndex = 1; // Set index for the *next* part
-          input.contentEditable = 'true';
-          input.focus();
-          contentWrapper.scrollTop = contentWrapper.scrollHeight;
-        });
-        return null; // Signal that output is handled asynchronously
+        showBioWindow();
+        return "Launching bio viewer...";
       },
       contact: () => {
         const contactText = "Cell: 732-573-8567\nEmail: mattiglody@gmail.com";
@@ -1286,18 +1151,10 @@
         });
         return null; // Signal that output is handled asynchronously
       },
-      workhistory: () => {
-        showWhWindow();
-        return "Launching Work History viewer...";
-      },
       linkedin: () => {
         const url = 'https://www.linkedin.com/in/matthew-iglody/';
         window.open(url, '_blank');
         return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
-      },
-      menu: () => {
-        showGui();
-        return null; // GUI handles its own display, no text output needed
       },
       pic: () => {
         showPicWindow();
@@ -1323,17 +1180,7 @@
         awaitingResponseFor = 'transcript_prompt';
         return "Would you like a transcript of your activity? (y/n)";
       },
-      challenge: () => {
-        return solvesimplechallenge();
-      },
     };
-
-    function solvesimplechallenge() {
-      // This is a placeholder for your challenge logic.
-      // For now, it just returns a message.
-      // You can replace this with any logic you want for your challenge!
-      return "Challenge function placeholder: Not yet implemented.";
-    }
 
     function handleCommand(cmd) {
       const resolvedCmd = commandAliases[cmd] || cmd;
