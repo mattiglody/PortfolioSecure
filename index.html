@@ -554,14 +554,16 @@
     function showBioWindow() {
       bringToFront(bioWindow);
 
-      // Reset state every time the window is opened
-      currentBioPartIndex = 0;
-      bioAwaitingResponse = false;
-      bioContent.innerHTML = ''; // Clear previous content
-      bioFooter.innerHTML = ''; // Clear footer
-
-      // Start the typewriter process
-      typeNextBioPart();
+      // If bio has never been started, initialize it.
+      if (bioContent.innerHTML.trim() === '') {
+        currentBioPartIndex = 0;
+        bioAwaitingResponse = false;
+        bioFooter.innerHTML = '';
+        typeNextBioPart();
+      } else if (!bioTypingInterval && !bioAwaitingResponse && currentBioPartIndex < bioParts.length) {
+        // If it's not currently typing or waiting, but there's more to type, resume.
+        typeNextBioPart();
+      }
 
       // Reset window position
       bioWindow.style.top = '';
@@ -602,25 +604,37 @@
         let textToType = bioParts[currentBioPartIndex];
         const isFirstPart = currentBioPartIndex === 0;
 
-        // Prepend the prompt character to the very first part
         if (isFirstPart) {
+          // Prepend the prompt character to the very first part
           textToType = `> ${textToType}`;
         } else {
           // For subsequent parts, add spacing
           bioContent.innerHTML += '\n\n';
         }
 
-        // Create a new span for the typewriter to append to.
-        const typewriterSpan = document.createElement('span');
-        bioContent.appendChild(typewriterSpan);
+        let typewriterSpan = document.getElementById('bio-active-span');
+        if (!typewriterSpan) {
+          typewriterSpan = document.createElement('span');
+          typewriterSpan.id = 'bio-active-span';
+          if (isFirstPart) {
+            // Apply a negative indent only to the first paragraph's span to pull the '>' to the edge.
+            typewriterSpan.style.display = 'block';
+            typewriterSpan.style.marginLeft = '-3px'; // Adjust as needed to align perfectly
+          }
+          bioContent.appendChild(typewriterSpan);
+        }
 
         guiTypewriterEffect(textToType, typewriterSpan, () => {
           // onComplete callback
+          typewriterSpan.removeAttribute('id'); // Clean up before moving on.
           currentBioPartIndex++;
           if (currentBioPartIndex < bioParts.length) {
             // More parts exist, show the input prompt.
             bioAwaitingResponse = true;
-            const promptText = document.createTextNode('\n\n> Would you like to continue reading? (y/n) ');
+            // Wrap the prompt in a span for consistent styling with the first paragraph.
+            const promptSpan = document.createElement('span');
+            promptSpan.textContent = '\n\n> Would you like to continue reading? (y/n) ';
+
             const responseInput = document.createElement('span');
             responseInput.id = 'bio-response-input';
             responseInput.contentEditable = 'true';
@@ -628,7 +642,7 @@
             // Add the specific keydown listener for this input
             responseInput.addEventListener('keydown', handleBioResponseKeydown);
 
-            bioContent.appendChild(promptText);
+            bioContent.appendChild(promptSpan);
             bioContent.appendChild(responseInput);
 
           } else {
@@ -640,12 +654,13 @@
     }
 
     function hideBioWindow() {
-      // If a typewriter is running for the bio, stop it.
+      // Stop any bio process that might be running. This effectively "pauses" the typewriter.
+      // The state (current text, current paragraph index) is preserved.
       if (bioTypingInterval) {
         clearInterval(bioTypingInterval);
         bioTypingInterval = null;
       }
-      bioAwaitingResponse = false; // Reset the prompt state
+
       bioContainer.classList.add('gui-hidden');
       bioContainer.classList.remove('gui-visible');
 
@@ -698,8 +713,8 @@
         clearInterval(bioTypingInterval);
       }
 
-      let i = 0;
-      targetElement.innerHTML = ''; // Clear the target first
+      // Start typing from the character after the last one already present.
+      let i = targetElement.textContent.length;
 
       bioTypingInterval = setInterval(() => {
         if (i < text.length) {
@@ -1086,8 +1101,9 @@
     bioContent.addEventListener('click', (event) => {
       if (bioAwaitingResponse) {
         const responseInput = document.getElementById('bio-response-input');
-        // If an input is active and the user clicks on the content area (but not the input itself), focus the input.
-        if (responseInput && event.target !== responseInput) {
+        // If an input field exists, always focus it and move the cursor to the end.
+        // This ensures correct behavior whether clicking the content area or the input itself.
+        if (responseInput) {
           moveCursorToEnd(responseInput);
         }
       }
