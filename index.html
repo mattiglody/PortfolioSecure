@@ -320,7 +320,7 @@
   */
   #gui-content ul a {
     display: block; /* Make the whole area clickable */
-    padding: 3px 0; /* Add some vertical padding for spacing and clickability */
+    padding: 2px 0; /* Reduced vertical padding for a tighter feel */
   }
   #gui-content li { margin-bottom: 0; } /* Ensure list items themselves have no margin */
 
@@ -335,7 +335,7 @@
 
   #wh-content li a {
     display: block;
-    padding: 6px 5px; /* Reduced vertical padding for a tighter list */
+    padding: 4px 5px; /* Further reduced vertical padding for a more precise hover area */
     border-bottom: 1px solid rgba(0, 255, 0, 0.2); /* Faint separator line */
     transition: all 0.1s ease-in-out; /* Smooth hover effect */
   }
@@ -767,6 +767,7 @@
 
     function makeDraggable(element, handle) {
       let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+      let dragStarted = false; // Flag to differentiate a drag from a scroll gesture
 
       const dragMouseDown = (e) => {
         // Prevent dragging when clicking on interactive elements (content, close button, resize handle)
@@ -774,6 +775,13 @@
         if (e.target.closest('.gui-content') || e.target.closest('.gui-close-button') || e.target.closest('.resize-handle')) {
           return;
         }
+
+        // For mouse events, we start dragging immediately and prevent default text selection.
+        if (e.type === 'mousedown') {
+          e.preventDefault();
+          dragStarted = true;
+        }
+
         // If the element is centered via transform (from CSS), convert it to absolute pixel
         // positioning before dragging begins. This prevents a "jump" on the first interaction.
         // We check the computed style because the transform may not be an inline style.
@@ -784,7 +792,6 @@
           element.style.top = `${rect.top}px`;
         }
 
-        e.preventDefault();
         // Get the initial cursor position
         if (e.type === 'touchstart') {
           pos3 = e.touches[0].clientX;
@@ -793,25 +800,48 @@
           pos3 = e.clientX;
           pos4 = e.clientY;
         }
+
         document.addEventListener('mouseup', closeDragElement);
         document.addEventListener('touchend', closeDragElement);
         document.addEventListener('mousemove', elementDrag);
-        document.addEventListener('touchmove', elementDrag);
+        // For touchmove, we need to be able to preventDefault, so passive: false is required.
+        document.addEventListener('touchmove', elementDrag, { passive: false });
       };
 
       const elementDrag = (e) => {
-        e.preventDefault();
         const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+        // For touch events, we check if it's a real drag or just a scroll attempt
+        if (e.type === 'touchmove' && !dragStarted) {
+          const dx = Math.abs(clientX - pos3);
+          const dy = Math.abs(clientY - pos4);
+
+          // If the user moves more vertically than horizontally, assume it's a scroll
+          // and not a drag. We then abort the drag sequence.
+          if (dy > dx && dy > 5) { // 5px threshold
+            closeDragElement();
+            return;
+          }
+          // If movement is confirmed as a drag, set the flag.
+          dragStarted = true;
+        }
+
+        // Once dragging has started, prevent default behavior (like page scroll).
+        e.preventDefault();
+
+        // Calculate the new cursor position
         pos1 = pos3 - clientX;
         pos2 = pos4 - clientY;
         pos3 = clientX;
         pos4 = clientY;
+        // Set the element's new position
         element.style.top = (element.offsetTop - pos2) + "px";
         element.style.left = (element.offsetLeft - pos1) + "px";
       };
 
       const closeDragElement = () => {
+        dragStarted = false; // Reset the flag
         document.removeEventListener('mouseup', closeDragElement);
         document.removeEventListener('touchend', closeDragElement);
         document.removeEventListener('mousemove', elementDrag);
@@ -819,7 +849,8 @@
       };
 
       handle.addEventListener('mousedown', dragMouseDown);
-      handle.addEventListener('touchstart', dragMouseDown);
+      // Make touchstart passive so it doesn't block scrolling while we decide if it's a drag.
+      handle.addEventListener('touchstart', dragMouseDown, { passive: true });
     }
 
     function makeResizable(element) {
@@ -1099,22 +1130,77 @@
     whCloseButton.addEventListener('click', handleWhCloseClick);
     whCloseButton.addEventListener('touchend', handleWhCloseClick);
 
-    const handleMenuClick = (event) => {
+    // --- Improved System Menu Touch Handling ---
+    let menuTouchStartX = 0;
+    let menuTouchStartY = 0;
+    let menuIsScrolling = false;
+    const menuScrollThreshold = 15; // Consistent threshold
+
+    guiContent.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      menuTouchStartX = touch.clientX;
+      menuTouchStartY = touch.clientY;
+      menuIsScrolling = false;
+    }, { passive: true });
+
+    guiContent.addEventListener('touchmove', (e) => {
+      if (menuIsScrolling) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - menuTouchStartX);
+      const dy = Math.abs(touch.clientY - menuTouchStartY);
+      if (dx > menuScrollThreshold || dy > menuScrollThreshold) {
+        menuIsScrolling = true;
+      }
+    }, { passive: true });
+
+    const handleMenuInteraction = (event) => {
+      if (event.type === 'touchend' && menuIsScrolling) {
+        return;
+      }
       const target = event.target.closest('a');
       if (target && target.dataset.command) {
         event.preventDefault();
         const command = target.dataset.command;
         simulateCommand(command);
-        hideGui(); // Close the window after selection
+        hideGui();
       }
     };
-    guiContent.addEventListener('click', handleMenuClick);
-    guiContent.addEventListener('touchend', handleMenuClick);
+    guiContent.addEventListener('click', handleMenuInteraction);
+    guiContent.addEventListener('touchend', handleMenuInteraction);
 
-    const handleWhClick = (event) => {
+    // --- Improved WH Window Touch Handling ---
+    // These variables track touch movement to differentiate a 'tap' from a 'scroll'.
+    let whTouchStartX = 0;
+    let whTouchStartY = 0;
+    let whIsScrolling = false;
+    const scrollThreshold = 15; // User must move finger more than 15px to be considered scrolling.
+
+    whContent.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      whTouchStartX = touch.clientX;
+      whTouchStartY = touch.clientY;
+      whIsScrolling = false; // Reset scroll flag on each new touch.
+    }, { passive: true });
+
+    whContent.addEventListener('touchmove', (e) => {
+      if (whIsScrolling) return; // No need to check further if it's already a scroll.
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - whTouchStartX);
+      const dy = Math.abs(touch.clientY - whTouchStartY);
+      if (dx > scrollThreshold || dy > scrollThreshold) {
+        whIsScrolling = true;
+      }
+    }, { passive: true });
+
+    const handleWhInteraction = (event) => {
+      // On touchend, if we detected a scroll, we do nothing to prevent accidental clicks.
+      if (event.type === 'touchend' && whIsScrolling) {
+        return;
+      }
+
       const target = event.target.closest('a');
       if (target && target.dataset.jobId) {
-        event.preventDefault();
+        event.preventDefault(); // Prevent default link behavior and redundant 'click' events on touch.
         const jobId = target.dataset.jobId;
         if (jobId === 'back') {
           populateWhList();
@@ -1123,8 +1209,9 @@
         }
       }
     };
-    whContent.addEventListener('click', handleWhClick);
-    whContent.addEventListener('touchend', handleWhClick);
+    // Use the new handler for both mouse clicks and touch taps.
+    whContent.addEventListener('click', handleWhInteraction);
+    whContent.addEventListener('touchend', handleWhInteraction);
 
     makeDraggable(document.getElementById('gui-window'), document.getElementById('gui-title-bar'));
     makeResizable(document.getElementById('gui-window'));
