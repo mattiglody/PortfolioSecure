@@ -213,8 +213,14 @@
 
   /* Specific override for the picture window to be smaller by default */
   #pic-window {
-    width: 300px;
+    width: 250px;
     height: auto; /* Let content determine height */
+  }
+
+  /* Specific override for the work history window to be smaller by default */
+  #wh-window {
+    width: 320px; /* Make it a bit narrower */
+    max-height: 300px; /* Prevent it from becoming too tall on launch */
   }
 
   .gui-title-bar {
@@ -260,6 +266,7 @@
   .gui-content {
     background-color: black; /* Content area has a black background */
     color: #00FF00; /* Text inside is green */
+    font-size: 13px; /* Standardize font size in all GUI windows for a tighter feel */
     padding: 0 15px 5px; /* top:0, horizontal:15, bottom:5 */
     flex-grow: 1; /* Allows content to fill available space when resizing */
     overflow: auto; /* Add scrollbar if content overflows */
@@ -311,7 +318,46 @@
    * This creates a compact list, which visually balances better with the short menu items,
    * making it feel more consistent with the other windows.
   */
-  #gui-content li { margin-bottom: 0; } /* Make the list items have no space between them */
+  #gui-content ul a {
+    display: block; /* Make the whole area clickable */
+    padding: 3px 0; /* Add some vertical padding for spacing and clickability */
+  }
+  #gui-content li { margin-bottom: 0; } /* Ensure list items themselves have no margin */
+
+  /* --- Work History (WH) Window Specific Styles --- */
+  #wh-content ul {
+    margin-top: 5px; /* Add a little space below the "Select a position..." text */
+  }
+
+  #wh-content li {
+    margin-bottom: 0; /* Override the generic li margin */
+  }
+
+  #wh-content li a {
+    display: block;
+    padding: 6px 5px; /* Reduced vertical padding for a tighter list */
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2); /* Faint separator line */
+    transition: all 0.1s ease-in-out; /* Smooth hover effect */
+  }
+
+  #wh-content li:last-child a {
+    border-bottom: none; /* No border on the last item */
+  }
+
+  #wh-content li a:hover {
+    background-color: #00FF00;
+    color: black;
+    padding-left: 10px; /* Indent on hover for a nice effect */
+  }
+
+  #wh-content li a span, .wh-detail-header span, .wh-detail-header strong {
+    display: block;
+    line-height: 1.15; /* Tighten up the line height */
+  }
+
+  .wh-title, .wh-company { padding-left: 1em; }
+  .wh-date { font-weight: bold; }
+  .wh-company { opacity: 0.7; font-size: 0.9em; }
 
   /* --- Mobile Optimizations --- */
   @media (max-width: 768px) {
@@ -674,37 +720,49 @@
     }
 
     function populateWhList() {
-      let content = '<div>Select a position to view details:</div><ul>';
-      Object.entries(workHistoryDetails).forEach(([key, value]) => {
-        content += `<li><a href="#" data-job-id="${key}">${value.title}</a></li>`;
+      let listHtml = '<div>Select a position to view details:</div><ul>';
+      // Reverse the order to show the most recent job first, which is standard.
+      Object.entries(workHistoryDetails).reverse().forEach(([key, value]) => {
+        const parts = value.title.split(' | ').map(p => p.trim());
+        const dateRange = parts[0] || '';
+        const jobTitle = parts[1] || '';
+        const company = parts[2] || '';
+
+        listHtml += `<li>
+                      <a href="#" data-job-id="${key}">
+                        <span class="wh-date">${dateRange}</span>
+                        <span class="wh-title">${jobTitle}</span>
+                        <span class="wh-company">${company}</span>
+                      </a>
+                    </li>`;
       });
-      content += '</ul>';
-      whContent.innerHTML = content;
+      listHtml += '</ul>';
+      whContent.innerHTML = listHtml;
     }
 
      function populateWhDetail(jobId) {
        const job = workHistoryDetails[jobId];
        if (!job) return;
  
-       // Clear the content area first
        whContent.innerHTML = '';
  
-       // Add the static title
-       const titleElement = document.createElement('p');
-       titleElement.innerHTML = `<strong>${job.title}</strong>`;
-       whContent.appendChild(titleElement);
+       const parts = job.title.split(' | ').map(p => p.trim());
+       const header = document.createElement('div');
+       header.classList.add('wh-detail-header');
+       header.innerHTML = `<span class="wh-date">${parts[0] || ''}</span>
+                         <strong class="wh-title">${parts[1] || ''}</strong>
+                         <span class="wh-company">${parts[2] || ''} - ${parts[3] || ''}</span>`;
+       whContent.appendChild(header);
  
        // Add a container for the description that will be typed out
        const descriptionContainer = document.createElement('p');
        descriptionContainer.style.whiteSpace = 'pre-wrap';
-       descriptionContainer.style.marginTop = '1em';
+       descriptionContainer.style.marginTop = '0.75em'; /* Reduced top margin for a tighter layout */
        whContent.appendChild(descriptionContainer);
- 
-       // Add a line break
-       whContent.appendChild(document.createElement('br'));
  
        // Add the "Back to List" link
        const backLinkContainer = document.createElement('p');
+       backLinkContainer.style.marginTop = '1em'; /* Add space above the back link */
        backLinkContainer.innerHTML = `<a href="#" data-job-id="back">-- Back to List --</a>`;
        whContent.appendChild(backLinkContainer);
  
@@ -819,8 +877,10 @@
         if (e.target.closest('.gui-content') || e.target.closest('.gui-close-button') || e.target.closest('.resize-handle')) {
           return;
         }
-        // If the element is centered with transform, convert to absolute pixel positioning for dragging
-        if (element.style.transform) {
+        // If the element is centered via transform (from CSS), convert it to absolute pixel
+        // positioning before dragging begins. This prevents a "jump" on the first interaction.
+        // We check the computed style because the transform may not be an inline style.
+        if (window.getComputedStyle(element).transform !== 'none') {
           const rect = element.getBoundingClientRect();
           element.style.transform = 'none';
           element.style.left = `${rect.left}px`;
@@ -873,14 +933,22 @@
         e.preventDefault();
         e.stopPropagation(); // Prevent triggering the drag behavior on the parent
 
-        // If the element is centered with transform, convert to absolute pixel positioning.
-        // This ensures 'offsetLeft' is reliable for calculations.
-        if (element.style.transform) {
+        // If the element is centered via transform (from CSS), convert it to absolute pixel
+        // positioning before resizing begins. This prevents a "jump" on the first interaction.
+        // We check the computed style because the transform may not be an inline style.
+        if (window.getComputedStyle(element).transform !== 'none') {
           const rect = element.getBoundingClientRect();
           element.style.transform = 'none';
           element.style.left = `${rect.left}px`;
           element.style.top = `${rect.top}px`;
         }
+
+        // --- FIX for WH window resize jump ---
+        // First, lock the current rendered height as an inline style.
+        // This prevents the window from suddenly expanding if its content is taller than its max-height.
+        element.style.height = `${element.offsetHeight}px`;
+        // Now, remove the max-height constraint so the user can resize freely beyond the initial limit.
+        element.style.maxHeight = 'none';
 
         if (e.target.classList.contains('se')) {
           direction = 'se';
@@ -1172,6 +1240,7 @@
 
     guiWindow.addEventListener('mousedown', () => bringToFront(guiWindow));
     picWindow.addEventListener('mousedown', () => bringToFront(picWindow));
+    whWindow.addEventListener('mousedown', () => bringToFront(whWindow));
 
     const commands = {
       help: () => {
@@ -1309,7 +1378,6 @@
     // --- INITIALIZATION ---
     printWelcomeMessage();
     contentWrapper.classList.add('no-scroll-on-launch');
-    whWindow.addEventListener('mousedown', () => bringToFront(whWindow));
   </script>
 </body>
 </html>
