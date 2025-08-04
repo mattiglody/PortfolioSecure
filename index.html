@@ -218,6 +218,8 @@
     top: 25px; /* Position from the top */
     left: 25px; /* Position from the left */
     transform: none; /* Override the default centering transform */
+    max-width: 400px;
+    max-height: 600px;
   }
 
   /* Specific override for the bio window to be positioned top-right */
@@ -228,6 +230,8 @@
     right: 25px; /* Position from the right */
     left: auto; /* Override the default left: 50% */
     transform: none; /* Override the default centering transform */
+    max-width: 800px;
+    max-height: 750px;
   }
 
   #bio-content {
@@ -260,11 +264,20 @@
   }
   .resize-handle.se {
     right: 0;
+    z-index: 11; /* Ensure corners are on top of the bottom handle */
     cursor: se-resize;
   }
   .resize-handle.sw {
     left: 0;
+    z-index: 11; /* Ensure corners are on top of the bottom handle */
     cursor: sw-resize;
+  }
+  .resize-handle.s {
+    bottom: 0;
+    left: 0;
+    width: 100%; /* Span the full width of the window */
+    height: 10px; /* Slimmer than corner handles */
+    cursor: s-resize;
   }
   
   .gui-close-button {
@@ -398,16 +411,17 @@
   <div id="pic-container" class="gui-hidden">
     <div id="pic-window" class="gui-window">
       <div id="pic-title-bar" class="gui-title-bar">
-        <span>Headshot</span>
+        <span id="pic-title">Caricature</span>
         <button id="pic-close-button" class="gui-close-button">X</button>
       </div>
       <div id="pic-content" class="gui-content">
         <!--<p>This is a placeholder for an image or other content.</p>-->
-        <img src="pics/Matt_Caricature.PNG" alt="Matt_Headshot">
+        <img id="pic-image" src="pics/Matt_Caricature.PNG" alt="Matt Caricature">
         <!--<p>In the future, this could display an actual image, maybe even a gallery.</p>-->
       </div>
       <div class="resize-handle se"></div>
       <div class="resize-handle sw"></div>
+      <div class="resize-handle s"></div>
     </div>
   </div>
 
@@ -425,6 +439,7 @@
       </div>
       <div class="resize-handle se"></div>
       <div class="resize-handle sw"></div>
+      <div class="resize-handle s"></div>
     </div>
   </div>
 
@@ -440,6 +455,8 @@
     const picContainer = document.getElementById('pic-container');
     const picWindow = document.getElementById('pic-window');
     const picCloseButton = document.getElementById('pic-close-button');
+    const picImage = document.getElementById('pic-image');
+    const picTitle = document.getElementById('pic-title');
     const bioContainer = document.getElementById('bio-container');
     const bioWindow = document.getElementById('bio-window');
     const bioCloseButton = document.getElementById('bio-close-button');
@@ -454,6 +471,9 @@
     let bioAwaitingResponse = false;
     let highestZ = 100; // For window stacking
     let windowStack = []; // To manage open window order
+
+    // --- Register secret command aliases ---
+    commandAliases['p-a'] = 'pic-a';
 
     // Focus the input when the user clicks/taps anywhere on the terminal body
     document.body.addEventListener('click', (event) => {
@@ -537,14 +557,22 @@
       terminal.appendChild(document.createTextNode(text));
     }
 
-    function showPicWindow() {
+    function showPicWindow(imageSrc, altText, title) {
+      // Update content before showing
+      picImage.src = imageSrc;
+      picImage.alt = altText;
+      picTitle.textContent = title;
+
       bringToFront(picWindow);
 
-      // By clearing inline styles, the window reverts to its CSS-defined
-      // position, which respects the media query for mobile/desktop.
-      picWindow.style.top = '';
-      picWindow.style.left = '';
-      picWindow.style.transform = '';
+      // Only reset position if the window is being opened for the first time.
+      // This prevents the window from jumping back to the center if the user
+      // has moved it and then switches images.
+      if (picContainer.classList.contains('gui-hidden')) {
+        picWindow.style.top = '';
+        picWindow.style.left = '';
+        picWindow.style.transform = '';
+      }
 
       picContainer.classList.remove('gui-hidden');
       picContainer.classList.add('gui-visible');
@@ -889,17 +917,19 @@
           element.style.top = `${rect.top}px`;
         }
 
-        // --- FIX for WH window resize jump ---
-        // First, lock the current rendered height as an inline style.
-        // This prevents the window from suddenly expanding if its content is taller than its max-height.
+        // --- FIX for window resize jump ---
+        // Lock the current rendered dimensions as inline styles.
+        // This prevents the window from suddenly changing size on first interaction
+        // if its content is larger than its set dimensions.
+        element.style.width = `${element.offsetWidth}px`;
         element.style.height = `${element.offsetHeight}px`;
-        // Now, remove the max-height constraint so the user can resize freely beyond the initial limit.
-        element.style.maxHeight = 'none';
 
         if (e.target.classList.contains('se')) {
           direction = 'se';
         } else if (e.target.classList.contains('sw')) {
           direction = 'sw';
+        } else if (e.target.classList.contains('s')) {
+          direction = 's';
         } else {
           return;
         }
@@ -934,24 +964,26 @@
         const dx = clientX - initialX;
         const dy = clientY - initialY;
 
-        // Get min dimensions from CSS to make resizing more robust.
+        // Get min/max dimensions from CSS to make resizing more robust.
         const styles = window.getComputedStyle(element);
         const minWidth = parseInt(styles.minWidth, 10);
         const minHeight = parseInt(styles.minHeight, 10);
+        const maxWidth = styles.maxWidth === 'none' ? Infinity : parseFloat(styles.maxWidth);
+        const maxHeight = styles.maxHeight === 'none' ? Infinity : parseFloat(styles.maxHeight);
 
         const newHeight = initialHeight + dy;
-        if (newHeight >= minHeight) {
+        if (newHeight >= minHeight && newHeight <= maxHeight) {
           element.style.height = newHeight + 'px';
         }
 
         if (direction === 'se') {
           const newWidth = initialWidth + dx;
-          if (newWidth >= minWidth) {
+          if (newWidth >= minWidth && newWidth <= maxWidth) {
             element.style.width = newWidth + 'px';
           }
         } else if (direction === 'sw') {
           const newWidth = initialWidth - dx;
-          if (newWidth >= minWidth) {
+          if (newWidth >= minWidth && newWidth <= maxWidth) {
             element.style.width = newWidth + 'px';
             element.style.left = (initialLeft + dx) + 'px';
           }
@@ -1185,8 +1217,12 @@
         return "ACCESSING EXTERNAL LINK...\nREDIRECTING TO LINKEDIN PROFILE IN NEW TAB.";
       },
       pic: () => {
-        showPicWindow();
-        return "Launching image viewer...";
+        showPicWindow('pics/Matt_Caricature.PNG', 'Matt Caricature', 'Caricature');
+        return "Launching image viewer... (Try 'pic-a' for a different view)";
+      },
+      'pic-a': () => {
+        showPicWindow('pics/headshot.png', 'Matt Headshot', 'Headshot');
+        return "Displaying headshot... (Try 'pic' for a different view)";
       },
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';
