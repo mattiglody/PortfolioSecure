@@ -349,6 +349,18 @@
       transform: translateX(-50%);
     }
 
+    /* Make the bio window shorter on mobile to prevent it from taking up too much screen space. */
+    #bio-window {
+      /* Match the picture window's dimensions on mobile */
+      width: 90vw;
+      height: auto;
+      /* Reset the 'right' property so it can be centered correctly by the generic .gui-window rule */
+      right: auto;
+      /* Explicitly apply the centering rules to override the desktop-specific positioning */
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
     .terminal-container {
       padding: 0 1em; /* Reduce horizontal padding for more content space */
     }
@@ -1204,6 +1216,8 @@
       // The 'clear' command is special as it modifies the terminal directly
       if (resolvedCmd === 'clear') {
         printWelcomeMessage();
+        hidePicWindow();
+        hideBioWindow();
         return;
       }
 
