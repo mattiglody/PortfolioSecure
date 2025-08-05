@@ -231,7 +231,7 @@
     left: auto; /* Override the default left: 50% */
     transform: none; /* Override the default centering transform */
     max-width: 800px;
-    max-height: 750px;
+    max-height: 800px;
   }
 
   #bio-content {
@@ -1223,11 +1223,11 @@
       },
       pic: () => {
         showPicWindow('pics/Matt_Caricature.PNG', 'Matt Caricature', 'Caricature');
-        return "Launching image viewer... (Try 'pic-a' for a different view)";
+        return "Running image viewer...";
       },
       'pic-a': () => {
         showPicWindow('pics/headshot.png', 'Matt Headshot', 'Headshot');
-        return "Displaying headshot... (Try 'pic' for a different view)";
+        return "Displaying headshot... (Use pic to return)";
       },
       transfer: () => {
         const filePath = 'docs/Matthew_E_Iglody_2025_CV.pdf';

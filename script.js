@@ -67,6 +67,6 @@ const bioParts = [
   "In December of 2022 I got the opportunity to make the switch into Research IT, Clinical trials, and...\n" +
   "I was there for another two years",
   "Congrats! You've reached the end of my bio.\n" +
-  "You have unlocked the code for a non-cartoon headshot!\n" +
+  "You have unlocked the code for a non-caricature headshot!\n" +
   "It is pic-a or p-a | Enjoy, and thanks again!",
 ];
